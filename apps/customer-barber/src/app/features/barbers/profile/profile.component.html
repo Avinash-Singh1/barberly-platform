@@ -1,0 +1,349 @@
+<div class="profile-page">
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner-large"></div>
+      <p>Loading barber profile...</p>
+    </div>
+  } @else if (barber()) {
+    <!-- Header Section -->
+    <div class="profile-header">
+      <div class="container">
+        <div class="header-content">
+          <div class="barber-avatar">
+            <img [src]="getBarberImage()" [alt]="getBarberFullName()" />
+            @if (barber()!.rating >= 4.5) {
+              <div class="badge-top-rated">⭐ Top Rated</div>
+            }
+          </div>
+
+          <div class="barber-details">
+            <h1 class="barber-name">{{ getBarberFullName() }}</h1>
+
+            <div class="barber-meta">
+              <div class="rating-display">
+                <span class="stars">{{ getRatingStars(barber()!.rating) }}</span>
+                <span class="rating-text">
+                  {{ barber()!.rating }} ({{ barber()!.totalReviews }} reviews)
+                </span>
+              </div>
+
+              @if (barber()!.city) {
+                <div class="location">
+                  📍 {{ barber()!.city }}@if (barber()!.state) {, {{ barber()!.state }}}
+                </div>
+              }
+
+              @if (barber()!.yearsOfExperience) {
+                <div class="experience">
+                  💼 {{ barber()!.yearsOfExperience }} years experience
+                </div>
+              }
+            </div>
+
+            @if (barber()!.specialties && barber()!.specialties.length > 0) {
+              <div class="specialties">
+                @for (specialty of barber()!.specialties; track specialty) {
+                  <span class="specialty-tag">{{ specialty }}</span>
+                }
+              </div>
+            }
+
+            @if (barber()!.bio) {
+              <p class="barber-bio">{{ barber()!.bio }}</p>
+            }
+
+            <button class="btn btn-primary btn-book-main" (click)="bookAppointment()">
+              📅 Book Appointment
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-navigation">
+      <div class="container">
+        <div class="tabs">
+          <button
+            class="tab-button"
+            [class.active]="activeTab() === 'services'"
+            (click)="setActiveTab('services')"
+          >
+            Services
+          </button>
+          <button
+            class="tab-button"
+            [class.active]="activeTab() === 'about'"
+            (click)="setActiveTab('about')"
+          >
+            About
+          </button>
+          <button
+            class="tab-button"
+            [class.active]="activeTab() === 'gallery'"
+            (click)="setActiveTab('gallery')"
+          >
+            Gallery
+          </button>
+          <button
+            class="tab-button"
+            [class.active]="activeTab() === 'reviews'"
+            (click)="setActiveTab('reviews')"
+          >
+            Reviews ({{ barber()!.totalReviews }})
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <div class="container">
+        <!-- Services Tab -->
+        @if (activeTab() === 'services') {
+          <div class="services-tab">
+            @if (getServiceCategories().length > 0) {
+              @for (category of getServiceCategories(); track category) {
+                <div class="service-category">
+                  <h2 class="category-title">{{ category }}</h2>
+                  <div class="services-list">
+                    @for (service of services()[category]; track service.id) {
+                      <div class="service-card">
+                        <div class="service-info">
+                          <h3 class="service-name">{{ service.name }}</h3>
+                          @if (service.description) {
+                            <p class="service-description">{{ service.description }}</p>
+                          }
+                          <div class="service-meta">
+                            <span class="service-duration">⏱️ {{ service.duration }} min</span>
+                          </div>
+                        </div>
+                        <div class="service-actions">
+                          <div class="service-price">${{ service.price }}</div>
+                          <button class="btn btn-outline-primary" (click)="bookAppointment(service)">
+                            Book
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            } @else {
+              <div class="empty-state">
+                <p>No services available at the moment.</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- About Tab -->
+        @if (activeTab() === 'about') {
+          <div class="about-tab">
+            <div class="about-content">
+              <section class="about-section">
+                <h2>About {{ getBarberFullName() }}</h2>
+                @if (barber()!.bio) {
+                  <p class="bio-text">{{ barber()!.bio }}</p>
+                } @else {
+                  <p class="text-muted">No biography available.</p>
+                }
+              </section>
+
+              <section class="about-section">
+                <h2>Professional Details</h2>
+                <div class="details-grid">
+                  @if (barber()!.yearsOfExperience) {
+                    <div class="detail-item">
+                      <span class="detail-icon">💼</span>
+                      <div>
+                        <div class="detail-label">Experience</div>
+                        <div class="detail-value">{{ barber()!.yearsOfExperience }} years</div>
+                      </div>
+                    </div>
+                  }
+
+                  @if (barber()!.rating) {
+                    <div class="detail-item">
+                      <span class="detail-icon">⭐</span>
+                      <div>
+                        <div class="detail-label">Rating</div>
+                        <div class="detail-value">{{ barber()!.rating }} / 5.0</div>
+                      </div>
+                    </div>
+                  }
+
+                  @if (barber()!.totalReviews) {
+                    <div class="detail-item">
+                      <span class="detail-icon">💬</span>
+                      <div>
+                        <div class="detail-label">Reviews</div>
+                        <div class="detail-value">{{ barber()!.totalReviews }} reviews</div>
+                      </div>
+                    </div>
+                  }
+
+                  @if (barber()!.licenseNumber) {
+                    <div class="detail-item">
+                      <span class="detail-icon">📜</span>
+                      <div>
+                        <div class="detail-label">License</div>
+                        <div class="detail-value">{{ barber()!.licenseNumber }}</div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </section>
+
+              @if (barber()!.specialties && barber()!.specialties.length > 0) {
+                <section class="about-section">
+                  <h2>Specialties</h2>
+                  <div class="specialties-list">
+                    @for (specialty of barber()!.specialties; track specialty) {
+                      <div class="specialty-item">
+                        <span class="specialty-bullet">✓</span>
+                        {{ specialty }}
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Gallery Tab -->
+        @if (activeTab() === 'gallery') {
+          <div class="gallery-tab">
+            @if (barber()!.gallery && barber()!.gallery!.length > 0) {
+              <div class="gallery-grid">
+                @for (image of barber()!.gallery!; track image.id) {
+                  <div class="gallery-item">
+                    <img [src]="image.imageUrl" [alt]="image.caption || 'Gallery image'" />
+                    @if (image.caption) {
+                      <div class="gallery-caption">{{ image.caption }}</div>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                <div class="empty-icon">🖼️</div>
+                <p>No gallery images available.</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Reviews Tab -->
+        @if (activeTab() === 'reviews') {
+          <div class="reviews-tab">
+            <!-- Review Stats -->
+            @if (barber()!.reviewStats) {
+              <div class="review-stats">
+                <div class="overall-rating">
+                  <div class="rating-number">{{ barber()!.reviewStats?.averageRating }}</div>
+                  <div class="rating-stars">{{ getRatingStars(barber()!.reviewStats?.averageRating || 0) }}</div>
+                  <div class="rating-count">{{ barber()!.reviewStats?.totalReviews }} reviews</div>
+                </div>
+
+                <div class="rating-distribution">
+                  @for (star of [5, 4, 3, 2, 1]; track star) {
+                    <div class="distribution-row">
+                      <span class="star-label">{{ star }} ⭐</span>
+                      <div class="distribution-bar">
+                        <div
+                          class="distribution-fill"
+                          [style.width.%]="(getRatingDistribution(star) / barber()!.reviewStats!.totalReviews) * 100"
+                        ></div>
+                      </div>
+                      <span class="distribution-count">
+                        {{ getRatingDistribution(star) }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Reviews List -->
+            @if (reviews().length > 0) {
+              <div class="reviews-list">
+                @for (review of reviews(); track review.id) {
+                  <div class="review-card">
+                    <div class="review-header">
+                      <div class="reviewer-avatar">
+                        {{ getReviewerInitials(review) }}
+                      </div>
+                      <div class="reviewer-info">
+                        <div class="reviewer-name">{{ getReviewerName(review) }}</div>
+                        <div class="review-meta">
+                          <span class="review-stars">{{ getRatingStars(review.rating) }}</span>
+                          <span class="review-date">{{ formatDate(review.createdAt) }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="review-content">
+                      <p class="review-comment">{{ review.comment }}</p>
+                      
+                      @if (review.tags && review.tags.length > 0) {
+                        <div class="review-tags">
+                          @for (tag of review.tags; track tag) {
+                            <span class="review-tag">{{ tag }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+
+                    @if (review.barberReply) {
+                      <div class="barber-reply">
+                        <div class="reply-header">
+                          <strong>Response from {{ getBarberFullName() }}</strong>
+                          @if (review.repliedAt) {
+                            <span class="reply-date">{{ formatDate(review.repliedAt) }}</span>
+                          }
+                        </div>
+                        <p class="reply-text">{{ review.barberReply }}</p>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (hasMoreReviews()) {
+                  <div class="load-more-container">
+                    <button
+                      class="btn btn-outline-primary"
+                      (click)="loadMoreReviews()"
+                      [disabled]="reviewsLoading()"
+                    >
+                      @if (reviewsLoading()) {
+                        <span class="spinner"></span>
+                        Loading...
+                      } @else {
+                        Load More Reviews
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                <div class="empty-icon">💬</div>
+                <p>No reviews yet. Be the first to review!</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="error-container">
+      <h2>Barber Not Found</h2>
+      <p>The barber you're looking for doesn't exist or is no longer available.</p>
+      <button class="btn btn-primary" (click)="router.navigate(['/barbers/search'])">
+        Browse Barbers
+      </button>
+    </div>
+  }
+</div>

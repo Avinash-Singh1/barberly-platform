@@ -1,0 +1,151 @@
+<div class="reviews-page">
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading appointment details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!loading() && errorMessage()" class="error-container">
+    <div class="error-icon">⚠️</div>
+    <h2>Unable to Load</h2>
+    <p>{{ errorMessage() }}</p>
+    <button (click)="cancel()" class="btn-secondary">Go Back</button>
+  </div>
+
+  <!-- Review Form -->
+  <div *ngIf="!loading() && !errorMessage() && appointment()" class="review-container">
+    <!-- Header -->
+    <div class="page-header">
+      <h1>Write a Review</h1>
+      <p>Share your experience with {{ getBarberFullName() }}</p>
+    </div>
+
+    <!-- Appointment Info Card -->
+    <div class="appointment-info-card">
+      <div class="barber-info">
+        <img [src]="getBarberImage()" [alt]="getBarberFullName()" class="barber-avatar" />
+        <div class="barber-details">
+          <h3>{{ getBarberFullName() }}</h3>
+          <p class="service-name">{{ getServiceName() }}</p>
+          <p class="appointment-date">{{ formatDate(appointment()!.appointmentDate) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Form -->
+    <form [formGroup]="reviewForm" (ngSubmit)="submitReview()" class="review-form">
+      
+      <!-- Error Message -->
+      <div *ngIf="errorMessage()" class="form-error-message">
+        {{ errorMessage() }}
+      </div>
+
+      <!-- Rating Section -->
+      <div class="form-section">
+        <label class="form-label">Rating <span class="required">*</span></label>
+        <p class="form-help">How would you rate your experience?</p>
+        
+        <div class="star-rating">
+          <button
+            *ngFor="let star of [1, 2, 3, 4, 5]"
+            type="button"
+            class="star-button"
+            [class.filled]="star <= getDisplayRating()"
+            (click)="setRating(star)"
+            (mouseenter)="setHoveredStar(star)"
+            (mouseleave)="setHoveredStar(null)"
+          >
+            <svg class="star-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="rating-labels">
+          <span *ngIf="getDisplayRating() === 1" class="rating-text poor">Poor</span>
+          <span *ngIf="getDisplayRating() === 2" class="rating-text fair">Fair</span>
+          <span *ngIf="getDisplayRating() === 3" class="rating-text good">Good</span>
+          <span *ngIf="getDisplayRating() === 4" class="rating-text very-good">Very Good</span>
+          <span *ngIf="getDisplayRating() === 5" class="rating-text excellent">Excellent</span>
+        </div>
+
+        <div *ngIf="rating?.invalid && rating?.touched" class="field-error">
+          Please select a rating
+        </div>
+      </div>
+
+      <!-- Tags Section -->
+      <div class="form-section">
+        <label class="form-label">Tags (Optional)</label>
+        <p class="form-help">Select tags that describe your experience</p>
+        
+        <div class="tags-container">
+          <button
+            *ngFor="let tag of availableTags"
+            type="button"
+            class="tag-button"
+            [class.selected]="isTagSelected(tag)"
+            (click)="toggleTag(tag)"
+          >
+            {{ tag }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Comment Section -->
+      <div class="form-section">
+        <label class="form-label" for="comment">
+          Your Review <span class="required">*</span>
+        </label>
+        <p class="form-help">Tell us about your experience (minimum 10 characters)</p>
+        
+        <textarea
+          id="comment"
+          formControlName="comment"
+          class="form-textarea"
+          [class.invalid]="comment?.invalid && comment?.touched"
+          rows="6"
+          placeholder="Share details about your visit, the service quality, atmosphere, and anything that made your experience memorable..."
+        ></textarea>
+
+        <div class="textarea-footer">
+          <div *ngIf="comment?.invalid && comment?.touched" class="field-error">
+            <span *ngIf="comment?.errors?.['required']">Review comment is required</span>
+            <span *ngIf="comment?.errors?.['minlength']">
+              Comment must be at least 10 characters
+            </span>
+          </div>
+          
+          <span class="character-count" [class.error]="getCharacterCount() > 1000">
+            {{ getCharacterCount() }} / 1000
+          </span>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button
+          type="button"
+          (click)="cancel()"
+          class="btn-secondary"
+          [disabled]="submitting()"
+        >
+          Cancel
+        </button>
+        
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="submitting() || reviewForm.invalid"
+        >
+          <span *ngIf="!submitting()">Submit Review</span>
+          <span *ngIf="submitting()" class="submitting-text">
+            <span class="spinner-small"></span>
+            Submitting...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

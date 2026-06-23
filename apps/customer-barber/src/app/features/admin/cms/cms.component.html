@@ -1,0 +1,389 @@
+<div class="admin-cms">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Content Management System</h1>
+      <p class="page-subtitle">Manage pages, FAQs, and promotional banners</p>
+    </div>
+    @if (contentType() === 'pages') {
+      <button class="btn-primary" (click)="openCreatePage()">
+        <span class="icon">+</span>
+        <span>Add Page</span>
+      </button>
+    }
+    @if (contentType() === 'faqs') {
+      <button class="btn-primary" (click)="openCreateFAQ()">
+        <span class="icon">+</span>
+        <span>Add FAQ</span>
+      </button>
+    }
+    @if (contentType() === 'banners') {
+      <button class="btn-primary" (click)="openCreateBanner()">
+        <span class="icon">+</span>
+        <span>Add Banner</span>
+      </button>
+    }
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Pages</span>
+      <span class="stat-value">{{ totalPages() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Published Pages</span>
+      <span class="stat-value" data-status="published">{{ publishedPages() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">FAQs</span>
+      <span class="stat-value" data-status="faqs">{{ totalFAQs() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Active Banners</span>
+      <span class="stat-value" data-status="banners">{{ activeBanners() }}</span>
+    </div>
+  </div>
+
+  <!-- Content Type Tabs -->
+  <div class="content-tabs">
+    <button 
+      class="tab-btn"
+      [class.active]="contentType() === 'pages'"
+      (click)="setContentType('pages')"
+    >
+      <span class="tab-icon">📄</span>
+      <span>Pages</span>
+      <span class="tab-count">({{ totalPages() }})</span>
+    </button>
+    <button 
+      class="tab-btn"
+      [class.active]="contentType() === 'faqs'"
+      (click)="setContentType('faqs')"
+    >
+      <span class="tab-icon">❓</span>
+      <span>FAQs</span>
+      <span class="tab-count">({{ totalFAQs() }})</span>
+    </button>
+    <button 
+      class="tab-btn"
+      [class.active]="contentType() === 'banners'"
+      (click)="setContentType('banners')"
+    >
+      <span class="tab-icon">🎯</span>
+      <span>Banners</span>
+      <span class="tab-count">({{ totalBanners() }})</span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading content...</p>
+    </div>
+  }
+
+  <!-- Pages View -->
+  @if (!loading() && contentType() === 'pages') {
+    <div class="pages-list">
+      @for (page of pages(); track page.id) {
+        <div class="content-card">
+          <div class="card-header">
+            <div class="header-left">
+              <h3 class="card-title">{{ page.title }}</h3>
+              <span class="card-slug">/{{ page.slug }}</span>
+            </div>
+            <div class="status-badge" [attr.data-status]="page.isPublished ? 'published' : 'draft'">
+              {{ page.isPublished ? 'Published' : 'Draft' }}
+            </div>
+          </div>
+
+          <p class="card-description">{{ page.metaDescription }}</p>
+
+          <div class="card-meta">
+            <span class="meta-item">
+              <span class="meta-icon">🕐</span>
+              <span>Updated {{ formatDate(page.lastUpdated) }}</span>
+            </span>
+            <span class="meta-item">
+              <span class="meta-icon">👤</span>
+              <span>{{ page.updatedBy }}</span>
+            </span>
+          </div>
+
+          <div class="card-actions">
+            <button class="action-btn" (click)="openEditPage(page)">
+              ✏️ Edit
+            </button>
+            <button class="action-btn delete" (click)="deletePage(page)">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- FAQs View -->
+  @if (!loading() && contentType() === 'faqs') {
+    <div class="faqs-view">
+      <!-- Search -->
+      <div class="search-bar">
+        <input 
+          type="text" 
+          placeholder="Search FAQs by question, answer, or category..." 
+          [value]="searchQuery()"
+          (input)="onSearchChange($event)"
+          class="search-input"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+
+      <!-- FAQs List -->
+      <div class="faqs-list">
+        @for (faq of filteredFAQs(); track faq.id) {
+          <div class="faq-card">
+            <div class="faq-header">
+              <div class="faq-category" [attr.data-category]="faq.category">
+                {{ faq.category }}
+              </div>
+              <div class="status-badge small" [attr.data-status]="faq.isPublished ? 'published' : 'draft'">
+                {{ faq.isPublished ? 'Published' : 'Draft' }}
+              </div>
+            </div>
+
+            <div class="faq-question">
+              <span class="question-icon">❓</span>
+              <span>{{ faq.question }}</span>
+            </div>
+
+            <div class="faq-answer">
+              <span class="answer-icon">💬</span>
+              <span>{{ faq.answer }}</span>
+            </div>
+
+            <div class="card-actions">
+              <button class="action-btn" (click)="openEditFAQ(faq)">
+                ✏️ Edit
+              </button>
+              <button class="action-btn delete" (click)="deleteFAQ(faq)">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Banners View -->
+  @if (!loading() && contentType() === 'banners') {
+    <div class="banners-grid">
+      @for (banner of banners(); track banner.id) {
+        <div class="banner-card">
+          <div class="banner-image" [style.background-image]="'url(' + banner.imageUrl + ')'">
+            <div class="status-badge" [attr.data-status]="banner.isActive ? 'active' : 'inactive'">
+              {{ banner.isActive ? 'ACTIVE' : 'INACTIVE' }}
+            </div>
+          </div>
+
+          <div class="banner-info">
+            <h3 class="banner-title">{{ banner.title }}</h3>
+            <p class="banner-description">{{ banner.description }}</p>
+
+            <div class="banner-dates">
+              <div class="date-item">
+                <span class="date-label">Start:</span>
+                <span class="date-value">{{ formatDate(banner.startDate) }}</span>
+              </div>
+              <div class="date-item">
+                <span class="date-label">End:</span>
+                <span class="date-value">{{ formatDate(banner.endDate) }}</span>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button class="action-btn" (click)="openEditBanner(banner)">
+                ✏️ Edit
+              </button>
+              <button class="action-btn delete" (click)="deleteBanner(banner)">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Page Form Modal -->
+  @if (showPageModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isEditMode() ? 'Edit Page' : 'Create New Page' }}</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="pageForm" class="cms-form">
+            <div class="form-field">
+              <label class="form-label">Slug (URL path) *</label>
+              <input type="text" formControlName="slug" class="form-input" placeholder="about-us" />
+              <span class="field-hint">Only lowercase letters, numbers, and hyphens</span>
+              @if (pageForm.get('slug')?.invalid && pageForm.get('slug')?.touched) {
+                <span class="field-error">Valid slug required (a-z, 0-9, hyphen)</span>
+              }
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Page Title *</label>
+              <input type="text" formControlName="title" class="form-input" placeholder="About Us" />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Content *</label>
+              <textarea formControlName="content" class="form-textarea" rows="8" placeholder="Page content..."></textarea>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Meta Description * (for SEO)</label>
+              <textarea formControlName="metaDescription" class="form-textarea" rows="2" placeholder="Brief description for search engines..." maxlength="160"></textarea>
+              <span class="field-hint">{{ pageForm.get('metaDescription')?.value?.length || 0 }}/160 characters</span>
+            </div>
+
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="isPublished" />
+              <span class="toggle-label">Publish this page</span>
+            </label>
+          </form>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn save" (click)="savePage()" [disabled]="processingAction()">
+            <span class="btn-icon">💾</span>
+            <span>{{ isEditMode() ? 'Update' : 'Create' }}</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- FAQ Form Modal -->
+  @if (showFAQModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isEditMode() ? 'Edit FAQ' : 'Create New FAQ' }}</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="faqForm" class="cms-form">
+            <div class="form-field">
+              <label class="form-label">Question *</label>
+              <input type="text" formControlName="question" class="form-input" placeholder="What is..." />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Answer *</label>
+              <textarea formControlName="answer" class="form-textarea" rows="4" placeholder="The answer is..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-label">Category *</label>
+                <select formControlName="category" class="form-select">
+                  @for (cat of faqCategories; track cat) {
+                    <option [value]="cat">{{ cat }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label class="form-label">Display Order</label>
+                <input type="number" formControlName="order" class="form-input" min="0" />
+              </div>
+            </div>
+
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="isPublished" />
+              <span class="toggle-label">Publish this FAQ</span>
+            </label>
+          </form>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn save" (click)="saveFAQ()" [disabled]="processingAction()">
+            <span class="btn-icon">💾</span>
+            <span>{{ isEditMode() ? 'Update' : 'Create' }}</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Banner Form Modal -->
+  @if (showBannerModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isEditMode() ? 'Edit Banner' : 'Create New Banner' }}</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="bannerForm" class="cms-form">
+            <div class="form-field">
+              <label class="form-label">Title *</label>
+              <input type="text" formControlName="title" class="form-input" placeholder="Summer Sale" />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Description *</label>
+              <textarea formControlName="description" class="form-textarea" rows="2" placeholder="Get 20% off..."></textarea>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Image URL *</label>
+              <input type="text" formControlName="imageUrl" class="form-input" placeholder="https://..." />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Link URL (optional)</label>
+              <input type="text" formControlName="linkUrl" class="form-input" placeholder="/promotions/summer" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-label">Start Date *</label>
+                <input type="date" formControlName="startDate" class="form-input" />
+              </div>
+
+              <div class="form-field">
+                <label class="form-label">End Date *</label>
+                <input type="date" formControlName="endDate" class="form-input" />
+              </div>
+            </div>
+
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="isActive" />
+              <span class="toggle-label">Banner is Active</span>
+            </label>
+          </form>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn save" (click)="saveBanner()" [disabled]="processingAction()">
+            <span class="btn-icon">💾</span>
+            <span>{{ isEditMode() ? 'Update' : 'Create' }}</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

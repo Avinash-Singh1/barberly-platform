@@ -1,0 +1,425 @@
+<div class="admin-permissions">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Permissions & Access Control</h1>
+      <p class="page-subtitle">Manage roles, permissions, and team member access</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Total Roles</span>
+      <span class="stat-value">{{ totalRoles() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Total Permissions</span>
+      <span class="stat-value" data-status="permissions">{{ totalPermissions() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Enabled</span>
+      <span class="stat-value" data-status="enabled">{{ enabledPermissions() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Team Members</span>
+      <span class="stat-value" data-status="members">{{ totalMembers() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Active Members</span>
+      <span class="stat-value" data-status="active">{{ activeMembers() }}</span>
+    </div>
+  </div>
+
+  <!-- View Mode Tabs -->
+  <div class="view-tabs">
+    <button 
+      class="tab-btn"
+      [class.active]="viewMode() === 'roles'"
+      (click)="setViewMode('roles')"
+    >
+      <span class="tab-icon">👑</span>
+      <span>Roles</span>
+    </button>
+    <button 
+      class="tab-btn"
+      [class.active]="viewMode() === 'permissions'"
+      (click)="setViewMode('permissions')"
+    >
+      <span class="tab-icon">🔐</span>
+      <span>Permissions</span>
+    </button>
+    <button 
+      class="tab-btn"
+      [class.active]="viewMode() === 'team'"
+      (click)="setViewMode('team')"
+    >
+      <span class="tab-icon">👥</span>
+      <span>Team Members</span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading data...</p>
+    </div>
+  }
+
+  <!-- Roles View -->
+  @if (!loading() && viewMode() === 'roles') {
+    <div class="roles-grid">
+      @for (role of roles(); track role.id) {
+        <div class="role-card" (click)="viewRoleDetails(role)">
+          <div class="role-header">
+            <span class="role-icon" [style.background]="role.color">{{ role.icon }}</span>
+            <div class="role-info">
+              <h3 class="role-name">{{ role.displayName }}</h3>
+              @if (role.isSystemRole) {
+                <span class="system-badge">System Role</span>
+              }
+            </div>
+          </div>
+
+          <p class="role-description">{{ role.description }}</p>
+
+          <div class="role-stats">
+            <div class="stat">
+              <span class="stat-icon">👥</span>
+              <span class="stat-text">{{ role.userCount }} user{{ role.userCount !== 1 ? 's' : '' }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-icon">🔐</span>
+              <span class="stat-text">{{ role.permissions.length }} permission{{ role.permissions.length !== 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="action-btn" (click)="$event.stopPropagation(); openPermissionsModal(role)">
+              View Permissions
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Permissions View -->
+  @if (!loading() && viewMode() === 'permissions') {
+    <div class="permissions-view">
+      @for (category of permissionCategories(); track category.name) {
+        <div class="permission-category">
+          <div class="category-header">
+            <div class="category-title">
+              <span class="category-icon">{{ category.icon }}</span>
+              <h3>{{ category.name }}</h3>
+            </div>
+            <span class="category-count">{{ category.permissions.length }} permissions</span>
+          </div>
+
+          <div class="permissions-list">
+            @for (permission of category.permissions; track permission.id) {
+              <div class="permission-item" [class.disabled]="!permission.isEnabled">
+                <div class="permission-info">
+                  <div class="permission-name">{{ permission.name }}</div>
+                  <div class="permission-description">{{ permission.description }}</div>
+                  <div class="permission-id">{{ permission.id }}</div>
+                </div>
+                <label class="permission-toggle">
+                  <input 
+                    type="checkbox" 
+                    [checked]="permission.isEnabled"
+                    (change)="togglePermission(permission)"
+                  />
+                  <span class="toggle-switch"></span>
+                </label>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Team Members View -->
+  @if (!loading() && viewMode() === 'team') {
+    <div class="team-view">
+      <!-- Search -->
+      <div class="search-bar">
+        <input 
+          type="text" 
+          placeholder="Search team members by name, email, or role..." 
+          [value]="searchQuery()"
+          (input)="onSearchChange($event)"
+          class="search-input"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+
+      <!-- Members List -->
+      <div class="members-list">
+        @for (member of filteredMembers(); track member.id) {
+          <div class="member-card" (click)="viewMemberDetails(member)">
+            <img [src]="member.avatar" [alt]="member.name" class="member-avatar" />
+            
+            <div class="member-info">
+              <div class="member-header">
+                <h3 class="member-name">{{ member.name }}</h3>
+                <div class="status-badge" [class.active]="member.isActive" [class.inactive]="!member.isActive">
+                  {{ member.isActive ? 'Active' : 'Inactive' }}
+                </div>
+              </div>
+              <div class="member-email">{{ member.email }}</div>
+              <div class="member-role" [style.color]="getRoleColor(member.role)">
+                <span class="role-icon-small">{{ getRoleIcon(member.role) }}</span>
+                <span>{{ member.role }}</span>
+              </div>
+            </div>
+
+            <div class="member-meta">
+              <div class="meta-item">
+                <span class="meta-label">Joined</span>
+                <span class="meta-value">{{ formatDate(member.joinedDate) }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Last Active</span>
+                <span class="meta-value">{{ getRelativeTime(member.lastActive) }}</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Role Details Modal -->
+  @if (showRoleModal() && selectedRole()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Role Details</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="role-details">
+            <!-- Header -->
+            <div class="details-header">
+              <span class="role-icon-large" [style.background]="selectedRole()!.color">{{ selectedRole()!.icon }}</span>
+              <div class="header-info">
+                <h3 class="role-title">{{ selectedRole()!.displayName }}</h3>
+                @if (selectedRole()!.isSystemRole) {
+                  <span class="system-badge large">System Role</span>
+                }
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="details-section">
+              <h4 class="section-title">Description</h4>
+              <p class="description-text">{{ selectedRole()!.description }}</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="details-section">
+              <h4 class="section-title">Statistics</h4>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <span class="stat-icon-large">👥</span>
+                  <div class="stat-content">
+                    <div class="stat-value-large">{{ selectedRole()!.userCount }}</div>
+                    <div class="stat-label-large">Users with this role</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-icon-large">🔐</span>
+                  <div class="stat-content">
+                    <div class="stat-value-large">{{ selectedRole()!.permissions.length }}</div>
+                    <div class="stat-label-large">Assigned Permissions</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Permissions -->
+            <div class="details-section">
+              <h4 class="section-title">Permissions</h4>
+              @if (selectedRole()!.permissions.includes('*')) {
+                <div class="all-permissions-badge">
+                  <span class="badge-icon">⭐</span>
+                  <span>All Permissions (Administrator)</span>
+                </div>
+              } @else {
+                <div class="permissions-badges">
+                  @for (perm of selectedRole()!.permissions; track perm) {
+                    <span class="permission-badge">{{ perm }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" (click)="closeModals()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Member Details Modal -->
+  @if (showMemberModal() && selectedMember()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Team Member Details</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="member-details">
+            <!-- Profile -->
+            <div class="profile-section">
+              <img [src]="selectedMember()!.avatar" [alt]="selectedMember()!.name" class="profile-avatar-large" />
+              <div class="profile-info-large">
+                <h3 class="profile-name">{{ selectedMember()!.name }}</h3>
+                <div class="profile-email">{{ selectedMember()!.email }}</div>
+                <div class="status-badge large" [class.active]="selectedMember()!.isActive" [class.inactive]="!selectedMember()!.isActive">
+                  {{ selectedMember()!.isActive ? 'Active' : 'Inactive' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Current Role -->
+            <div class="details-section">
+              <h4 class="section-title">Current Role</h4>
+              <div class="current-role" [style.border-color]="getRoleColor(selectedMember()!.role)">
+                <span class="role-icon-display" [style.background]="getRoleColor(selectedMember()!.role)">
+                  {{ getRoleIcon(selectedMember()!.role) }}
+                </span>
+                <span class="role-name-display">{{ selectedMember()!.role }}</span>
+              </div>
+            </div>
+
+            <!-- Change Role -->
+            <div class="details-section">
+              <h4 class="section-title">Change Role</h4>
+              <div class="role-options">
+                @for (role of roles(); track role.id) {
+                  <button 
+                    class="role-option"
+                    [class.current]="selectedMember()!.role === role.name"
+                    [style.border-color]="role.color"
+                    (click)="changeMemberRole(selectedMember()!, role.name)"
+                  >
+                    <span class="role-option-icon" [style.background]="role.color">{{ role.icon }}</span>
+                    <span class="role-option-name">{{ role.displayName }}</span>
+                    @if (selectedMember()!.role === role.name) {
+                      <span class="current-badge">Current</span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Activity Info -->
+            <div class="details-section">
+              <h4 class="section-title">Activity Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">📅</span>
+                  <div>
+                    <div class="info-label">Joined Date</div>
+                    <div class="info-value">{{ formatDate(selectedMember()!.joinedDate) }}</div>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">🕐</span>
+                  <div>
+                    <div class="info-label">Last Active</div>
+                    <div class="info-value">{{ getRelativeTime(selectedMember()!.lastActive) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          @if (selectedMember()!.isActive) {
+            <button class="action-btn deactivate" (click)="toggleMemberStatus(selectedMember()!)">
+              <span class="btn-icon">⏸</span>
+              <span>Deactivate</span>
+            </button>
+          } @else {
+            <button class="action-btn activate" (click)="toggleMemberStatus(selectedMember()!)">
+              <span class="btn-icon">▶</span>
+              <span>Activate</span>
+            </button>
+          }
+          <button class="action-btn secondary" (click)="closeModals()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Permissions Modal -->
+  @if (showPermissionsModal() && selectedRole()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="title-icon" [style.background]="selectedRole()!.color">{{ selectedRole()!.icon }}</span>
+            <h2>{{ selectedRole()!.displayName }} Permissions</h2>
+          </div>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          @if (selectedRole()!.permissions.includes('*')) {
+            <div class="all-permissions-notice">
+              <span class="notice-icon">⭐</span>
+              <div class="notice-content">
+                <h4>Full Access</h4>
+                <p>This role has all permissions enabled by default.</p>
+              </div>
+            </div>
+          } @else {
+            <div class="permissions-matrix">
+              @for (category of permissionCategories(); track category.name) {
+                <div class="matrix-category">
+                  <h4 class="matrix-category-title">
+                    <span class="matrix-icon">{{ category.icon }}</span>
+                    <span>{{ category.name }}</span>
+                  </h4>
+                  <div class="matrix-permissions">
+                    @for (permission of category.permissions; track permission.id) {
+                      <div class="matrix-item" [class.granted]="hasPermission(selectedRole()!, permission.id)">
+                        <div class="matrix-checkbox">
+                          @if (hasPermission(selectedRole()!, permission.id)) {
+                            <span class="check-icon">✓</span>
+                          } @else {
+                            <span class="cross-icon">✕</span>
+                          }
+                        </div>
+                        <div class="matrix-info">
+                          <div class="matrix-name">{{ permission.name }}</div>
+                          <div class="matrix-description">{{ permission.description }}</div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" (click)="closeModals()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

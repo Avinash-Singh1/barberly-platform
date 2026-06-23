@@ -1,0 +1,283 @@
+<div class="services-page">
+  <div class="services-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>My Services</h1>
+        <p>Manage your service offerings and pricing</p>
+      </div>
+      <button (click)="openAddModal()" class="btn-add">
+        ✨ Add Service
+      </button>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div *ngIf="successMessage()" class="alert alert-success">
+      {{ successMessage() }}
+      <button (click)="closeMessage()" class="alert-close">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage()" class="alert alert-error">
+      {{ errorMessage() }}
+      <button (click)="closeMessage()" class="alert-close">✕</button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading services...</p>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="!loading()" class="content">
+      <!-- Stats Summary -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-value">{{ services().length }}</span>
+          <span class="stat-label">Total Services</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ getActiveServices().length }}</span>
+          <span class="stat-label">Active</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ getInactiveServices().length }}</span>
+          <span class="stat-label">Inactive</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="services().length === 0" class="empty-state">
+        <div class="empty-icon">✂️</div>
+        <h3>No services yet</h3>
+        <p>Add your first service to start accepting bookings</p>
+        <button (click)="openAddModal()" class="btn-primary">
+          ✨ Add Your First Service
+        </button>
+      </div>
+
+      <!-- Services Grid -->
+      <div *ngIf="services().length > 0" class="services-grid">
+        <div *ngFor="let service of services()" class="service-card" [class.inactive]="!service.isActive">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="service-title">
+              <h3>{{ service.name }}</h3>
+              <span class="service-category">{{ service.category }}</span>
+            </div>
+            <div class="status-toggle">
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  [checked]="service.isActive"
+                  (change)="toggleServiceStatus(service)"
+                />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="status-label" [class.active]="service.isActive">
+                {{ service.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="card-body">
+            <p class="service-description">{{ service.description }}</p>
+
+            <div class="service-meta">
+              <div class="meta-item">
+                <span class="meta-icon">💵</span>
+                <span class="meta-label">Price:</span>
+                <span class="meta-value">{{ formatPrice(service.price) }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-icon">⏱️</span>
+                <span class="meta-label">Duration:</span>
+                <span class="meta-value">{{ formatDuration(service.duration) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Actions -->
+          <div class="card-actions">
+            <button (click)="openEditModal(service)" class="btn-action btn-edit">
+              ✏️ Edit
+            </button>
+            <button (click)="deleteService(service)" class="btn-action btn-delete">
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Section -->
+      <div *ngIf="services().length > 0" class="info-section">
+        <div class="info-card">
+          <div class="info-icon">💡</div>
+          <div class="info-content">
+            <h3>Service Tips</h3>
+            <ul>
+              <li>Keep descriptions clear and concise</li>
+              <li>Set realistic durations to avoid overbooking</li>
+              <li>Price competitively based on your market</li>
+              <li>Toggle services inactive instead of deleting them</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Service Modal -->
+<div *ngIf="showModal()" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ modalMode() === 'add' ? 'Add New Service' : 'Edit Service' }}</h2>
+      <button (click)="closeModal()" class="modal-close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Error Message -->
+      <div *ngIf="errorMessage()" class="alert alert-error">
+        {{ errorMessage() }}
+      </div>
+
+      <!-- Form -->
+      <form [formGroup]="serviceForm" (ngSubmit)="submitForm()" class="service-form">
+        <!-- Service Name -->
+        <div class="form-group">
+          <label class="form-label" for="name">
+            Service Name <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            formControlName="name"
+            class="form-input"
+            [class.invalid]="name?.invalid && name?.touched"
+            placeholder="e.g., Classic Haircut"
+          />
+          <div *ngIf="name?.invalid && name?.touched" class="field-error">
+            <span *ngIf="name?.errors?.['required']">Service name is required</span>
+            <span *ngIf="name?.errors?.['minlength']">Name must be at least 3 characters</span>
+            <span *ngIf="name?.errors?.['maxlength']">Name must not exceed 100 characters</span>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="form-group">
+          <label class="form-label" for="category">
+            Category <span class="required">*</span>
+          </label>
+          <select
+            id="category"
+            formControlName="category"
+            class="form-select"
+          >
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <!-- Price & Duration Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="price">
+              Price ($) <span class="required">*</span>
+            </label>
+            <input
+              type="number"
+              id="price"
+              formControlName="price"
+              class="form-input"
+              [class.invalid]="price?.invalid && price?.touched"
+              placeholder="35"
+              min="1"
+              max="9999"
+              step="0.01"
+            />
+            <div *ngIf="price?.invalid && price?.touched" class="field-error">
+              <span *ngIf="price?.errors?.['required']">Price is required</span>
+              <span *ngIf="price?.errors?.['min']">Price must be at least $1</span>
+              <span *ngIf="price?.errors?.['max']">Price must not exceed $9,999</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="duration">
+              Duration (min) <span class="required">*</span>
+            </label>
+            <select
+              id="duration"
+              formControlName="duration"
+              class="form-select"
+            >
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="120">2 hours</option>
+              <option value="180">3 hours</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label" for="description">
+            Description <span class="required">*</span>
+          </label>
+          <textarea
+            id="description"
+            formControlName="description"
+            class="form-textarea"
+            [class.invalid]="description?.invalid && description?.touched"
+            rows="4"
+            placeholder="Describe what's included in this service..."
+          ></textarea>
+          <div class="textarea-footer">
+            <div *ngIf="description?.invalid && description?.touched" class="field-error">
+              <span *ngIf="description?.errors?.['required']">Description is required</span>
+              <span *ngIf="description?.errors?.['minlength']">Description must be at least 10 characters</span>
+            </div>
+            <span class="character-count" [class.error]="getDescriptionCharCount() > 500">
+              {{ getDescriptionCharCount() }} / 500
+            </span>
+          </div>
+        </div>
+
+        <!-- Active Status -->
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="isActive" />
+            <span>Active (customers can book this service)</span>
+          </label>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="modal-actions">
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="btn btn-secondary"
+            [disabled]="submitting()"
+          >
+            Cancel
+          </button>
+          
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="submitting() || serviceForm.invalid"
+          >
+            <span *ngIf="!submitting()">
+              {{ modalMode() === 'add' ? '✨ Add Service' : '✓ Save Changes' }}
+            </span>
+            <span *ngIf="submitting()">Saving...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,153 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>Join Barberly</h1>
+      <p>Create your account to get started</p>
+    </div>
+
+    <!-- Role Selection -->
+    <div class="role-selection">
+      <button
+        type="button"
+        class="role-card"
+        [class.active]="selectedRole() === UserRole.CUSTOMER"
+        (click)="selectRole(UserRole.CUSTOMER)"
+      >
+        <div class="role-icon">👤</div>
+        <h3>Customer</h3>
+        <p>Book appointments with barbers</p>
+      </button>
+
+      <button
+        type="button"
+        class="role-card"
+        [class.active]="selectedRole() === UserRole.BARBER"
+        (click)="selectRole(UserRole.BARBER)"
+      >
+        <div class="role-icon">✂️</div>
+        <h3>Barber</h3>
+        <p>Manage your services and clients</p>
+      </button>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert alert-error">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input
+            type="text"
+            id="firstName"
+            formControlName="firstName"
+            placeholder="John"
+            [class.error]="getFieldError('firstName')"
+          />
+          @if (getFieldError('firstName')) {
+            <span class="error-message">{{ getFieldError('firstName') }}</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input
+            type="text"
+            id="lastName"
+            formControlName="lastName"
+            placeholder="Doe"
+            [class.error]="getFieldError('lastName')"
+          />
+          @if (getFieldError('lastName')) {
+            <span class="error-message">{{ getFieldError('lastName') }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="john.doe@example.com"
+          [class.error]="getFieldError('email')"
+        />
+        @if (getFieldError('email')) {
+          <span class="error-message">{{ getFieldError('email') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="phone">
+          Phone Number
+          <span class="optional">(optional)</span>
+        </label>
+        <input
+          type="tel"
+          id="phone"
+          formControlName="phone"
+          placeholder="+1234567890"
+          [class.error]="getFieldError('phone')"
+        />
+        @if (getFieldError('phone')) {
+          <span class="error-message">{{ getFieldError('phone') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          placeholder="At least 6 characters"
+          [class.error]="getFieldError('password')"
+        />
+        @if (getFieldError('password')) {
+          <span class="error-message">{{ getFieldError('password') }}</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          formControlName="confirmPassword"
+          placeholder="Re-enter your password"
+          [class.error]="getFieldError('confirmPassword') || registerForm.errors?.['passwordMismatch']"
+        />
+        @if (getFieldError('confirmPassword')) {
+          <span class="error-message">{{ getFieldError('confirmPassword') }}</span>
+        }
+        @if (registerForm.errors?.['passwordMismatch'] && registerForm.get('confirmPassword')?.touched) {
+          <span class="error-message">Passwords do not match</span>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary btn-block"
+        [disabled]="loading()"
+      >
+        @if (loading()) {
+          <span class="spinner"></span>
+          Creating account...
+        } @else {
+          Create Account
+        }
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>
+        Already have an account?
+        <a routerLink="/auth/login">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>

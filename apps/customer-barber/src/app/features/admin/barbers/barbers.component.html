@@ -1,0 +1,300 @@
+<div class="admin-barbers">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Barber Management</h1>
+      <p class="page-subtitle">Manage barber registrations and approvals</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item" [class.active]="selectedFilter() === 'ALL'" (click)="setFilter('ALL')">
+      <span class="stat-label">Total Barbers</span>
+      <span class="stat-value">{{ totalBarbers() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedFilter() === 'PENDING'" (click)="setFilter('PENDING')">
+      <span class="stat-label">Pending Approval</span>
+      <span class="stat-value" data-status="pending">{{ pendingCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedFilter() === 'APPROVED'" (click)="setFilter('APPROVED')">
+      <span class="stat-label">Approved</span>
+      <span class="stat-value" data-status="approved">{{ approvedCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedFilter() === 'REJECTED'" (click)="setFilter('REJECTED')">
+      <span class="stat-label">Rejected</span>
+      <span class="stat-value" data-status="rejected">{{ rejectedCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedFilter() === 'SUSPENDED'" (click)="setFilter('SUSPENDED')">
+      <span class="stat-label">Suspended</span>
+      <span class="stat-value" data-status="suspended">{{ suspendedCount() }}</span>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <input 
+      type="text" 
+      placeholder="Search by name, email, or phone..." 
+      [value]="searchQuery()"
+      (input)="onSearchChange($event)"
+      class="search-input"
+    />
+    <span class="search-icon">🔍</span>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading barbers...</p>
+    </div>
+  }
+
+  <!-- Barbers List -->
+  @if (!loading()) {
+    @if (filteredBarbers().length > 0) {
+      <div class="barbers-grid">
+        @for (barber of filteredBarbers(); track barber.id) {
+          <div class="barber-card" (click)="viewDetails(barber)">
+            <!-- Profile Image -->
+            <div class="barber-header">
+              <img [src]="barber.profileImage" [alt]="barber.name" class="barber-avatar" />
+              <div class="status-badge" [attr.data-status]="barber.status.toLowerCase()">
+                {{ barber.status }}
+              </div>
+            </div>
+
+            <!-- Barber Info -->
+            <div class="barber-info">
+              <h3 class="barber-name">{{ barber.name }}</h3>
+              <p class="barber-email">{{ barber.email }}</p>
+              <p class="barber-phone">{{ barber.phone }}</p>
+              
+              <!-- Experience & Verification -->
+              <div class="barber-meta">
+                <span class="meta-item">
+                  <span class="meta-icon">💼</span>
+                  <span>{{ barber.experience }} years</span>
+                </span>
+                <span class="meta-item" [class.verified]="barber.documentsVerified">
+                  <span class="meta-icon">{{ barber.documentsVerified ? '✓' : '⚠️' }}</span>
+                  <span>{{ barber.documentsVerified ? 'Verified' : 'Unverified' }}</span>
+                </span>
+              </div>
+
+              <!-- Performance (for approved barbers) -->
+              @if (barber.status === 'APPROVED' && barber.rating) {
+                <div class="barber-performance">
+                  <div class="performance-item">
+                    <span class="performance-label">Rating</span>
+                    <span class="performance-value">⭐ {{ barber.rating.toFixed(1) }}</span>
+                  </div>
+                  <div class="performance-item">
+                    <span class="performance-label">Appointments</span>
+                    <span class="performance-value">{{ barber.totalAppointments }}</span>
+                  </div>
+                </div>
+              }
+
+              <!-- Specialties -->
+              <div class="barber-specialties">
+                @for (specialty of barber.specialties.slice(0, 2); track specialty) {
+                  <span class="specialty-tag">{{ specialty }}</span>
+                }
+                @if (barber.specialties.length > 2) {
+                  <span class="specialty-tag more">+{{ barber.specialties.length - 2 }}</span>
+                }
+              </div>
+
+              <!-- Registration Date -->
+              <p class="barber-registered">Registered {{ getRelativeTime(barber.registeredAt) }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h3>No barbers found</h3>
+        <p>Try adjusting your filters or search criteria</p>
+      </div>
+    }
+  }
+
+  <!-- Details Modal -->
+  @if (showDetailsModal() && selectedBarber()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h2>Barber Details</h2>
+          <button class="close-btn" (click)="closeModal()">✕</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <div class="barber-details">
+            <!-- Profile Section -->
+            <div class="details-section">
+              <div class="profile-section">
+                <img [src]="selectedBarber()!.profileImage" [alt]="selectedBarber()!.name" class="profile-avatar" />
+                <div class="profile-info">
+                  <h3 class="profile-name">{{ selectedBarber()!.name }}</h3>
+                  <div class="status-badge large" [attr.data-status]="selectedBarber()!.status.toLowerCase()">
+                    {{ selectedBarber()!.status }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="details-section">
+              <h4 class="section-title">Contact Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">📧</span>
+                  <div>
+                    <p class="info-label">Email</p>
+                    <p class="info-value">{{ selectedBarber()!.email }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📱</span>
+                  <div>
+                    <p class="info-label">Phone</p>
+                    <p class="info-value">{{ selectedBarber()!.phone }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📍</span>
+                  <div>
+                    <p class="info-label">Address</p>
+                    <p class="info-value">{{ selectedBarber()!.address }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Professional Info -->
+            <div class="details-section">
+              <h4 class="section-title">Professional Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">💼</span>
+                  <div>
+                    <p class="info-label">Experience</p>
+                    <p class="info-value">{{ selectedBarber()!.experience }} years</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">{{ selectedBarber()!.documentsVerified ? '✓' : '⚠️' }}</span>
+                  <div>
+                    <p class="info-label">Verification Status</p>
+                    <p class="info-value" [class.verified]="selectedBarber()!.documentsVerified">
+                      {{ selectedBarber()!.documentsVerified ? 'Documents Verified' : 'Pending Verification' }}
+                    </p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📅</span>
+                  <div>
+                    <p class="info-label">Registered</p>
+                    <p class="info-value">{{ formatDate(selectedBarber()!.registeredAt) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance (if approved) -->
+            @if (selectedBarber()!.status === 'APPROVED' && selectedBarber()!.rating) {
+              <div class="details-section">
+                <h4 class="section-title">Performance Metrics</h4>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-icon">⭐</span>
+                    <div>
+                      <p class="info-label">Average Rating</p>
+                      <p class="info-value">{{ selectedBarber()!.rating!.toFixed(1) }} / 5.0</p>
+                    </div>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-icon">📅</span>
+                    <div>
+                      <p class="info-label">Total Appointments</p>
+                      <p class="info-value">{{ selectedBarber()!.totalAppointments }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Bio -->
+            <div class="details-section">
+              <h4 class="section-title">About</h4>
+              <p class="bio-text">{{ selectedBarber()!.bio }}</p>
+            </div>
+
+            <!-- Specialties -->
+            <div class="details-section">
+              <h4 class="section-title">Specialties</h4>
+              <div class="specialties-list">
+                @for (specialty of selectedBarber()!.specialties; track specialty) {
+                  <span class="specialty-badge">{{ specialty }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-actions">
+          @if (selectedBarber()!.status === 'PENDING') {
+            <button 
+              class="action-btn approve" 
+              (click)="approveBarber(selectedBarber()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">✓</span>
+              <span>Approve Barber</span>
+            </button>
+            <button 
+              class="action-btn reject" 
+              (click)="rejectBarber(selectedBarber()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">✕</span>
+              <span>Reject</span>
+            </button>
+          }
+
+          @if (selectedBarber()!.status === 'APPROVED') {
+            <button 
+              class="action-btn suspend" 
+              (click)="suspendBarber(selectedBarber()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">⏸</span>
+              <span>Suspend Barber</span>
+            </button>
+          }
+
+          @if (selectedBarber()!.status === 'SUSPENDED') {
+            <button 
+              class="action-btn approve" 
+              (click)="unsuspendBarber(selectedBarber()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">▶</span>
+              <span>Reactivate Barber</span>
+            </button>
+          }
+
+          <button class="action-btn secondary" (click)="closeModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

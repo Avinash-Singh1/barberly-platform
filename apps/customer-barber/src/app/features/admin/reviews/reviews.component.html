@@ -1,0 +1,359 @@
+<div class="admin-reviews">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Review Moderation</h1>
+      <p class="page-subtitle">Monitor and moderate customer reviews across the platform</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item" [class.active]="selectedStatus() === 'ALL'" (click)="setStatusFilter('ALL')">
+      <span class="stat-label">Total Reviews</span>
+      <span class="stat-value">{{ totalCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'PUBLISHED'" (click)="setStatusFilter('PUBLISHED')">
+      <span class="stat-label">Published</span>
+      <span class="stat-value" data-status="published">{{ publishedCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'FLAGGED'" (click)="setStatusFilter('FLAGGED')">
+      <span class="stat-label">Flagged</span>
+      <span class="stat-value" data-status="flagged">{{ flaggedCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'REMOVED'" (click)="setStatusFilter('REMOVED')">
+      <span class="stat-label">Removed</span>
+      <span class="stat-value" data-status="removed">{{ removedCount() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Avg Rating</span>
+      <span class="stat-value" data-status="rating">{{ averageRating().toFixed(1) }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Reported</span>
+      <span class="stat-value" data-status="reported">{{ reportedCount() }}</span>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <input 
+        type="text" 
+        placeholder="Search by customer, barber, service, or comment..." 
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input"
+      />
+      <span class="search-icon">🔍</span>
+    </div>
+
+    <!-- Rating Filter -->
+    <div class="rating-filters">
+      <button 
+        class="rating-btn"
+        [class.active]="selectedRating() === 'ALL'"
+        (click)="setRatingFilter('ALL')"
+      >
+        All Ratings
+      </button>
+      @for (rating of ratingFilters; track rating) {
+        <button 
+          class="rating-btn"
+          [class.active]="selectedRating() === rating"
+          (click)="setRatingFilter(rating)"
+        >
+          {{ rating }} <span class="star">★</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading reviews...</p>
+    </div>
+  }
+
+  <!-- Reviews List -->
+  @if (!loading()) {
+    @if (filteredReviews().length > 0) {
+      <div class="reviews-list">
+        @for (review of filteredReviews(); track review.id) {
+          <div class="review-card" (click)="viewDetails(review)">
+            <!-- Header -->
+            <div class="review-header">
+              <div class="customer-info">
+                <img [src]="review.customerImage" [alt]="review.customerName" class="customer-avatar" />
+                <div class="customer-details">
+                  <div class="customer-name">{{ review.customerName }}</div>
+                  <div class="review-date">{{ getRelativeTime(review.createdAt) }}</div>
+                </div>
+              </div>
+              <div class="review-meta">
+                <div class="rating" [attr.data-color]="getRatingColor(review.rating)">
+                  @for (star of getStars(review.rating); track $index) {
+                    <span class="star">{{ star }}</span>
+                  }
+                </div>
+                <div class="status-badge" [attr.data-status]="getStatusColor(review.status)">
+                  {{ review.status }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Service Info -->
+            <div class="service-info">
+              <span class="service-icon">✂️</span>
+              <span class="service-text">{{ review.serviceName }} with {{ review.barberName }}</span>
+            </div>
+
+            <!-- Comment -->
+            <div class="review-comment">{{ review.comment }}</div>
+
+            <!-- Barber Response -->
+            @if (review.response) {
+              <div class="barber-response">
+                <div class="response-header">
+                  <span class="response-icon">💬</span>
+                  <span class="response-label">Barber Response</span>
+                </div>
+                <div class="response-text">{{ review.response.text }}</div>
+              </div>
+            }
+
+            <!-- Footer -->
+            <div class="review-footer">
+              <div class="footer-left">
+                <div class="helpful-stats">
+                  <span class="helpful-item">
+                    <span class="icon">👍</span>
+                    <span>{{ review.helpful }}</span>
+                  </span>
+                  <span class="helpful-item">
+                    <span class="icon">👎</span>
+                    <span>{{ review.notHelpful }}</span>
+                  </span>
+                </div>
+                @if (review.reportCount > 0) {
+                  <div class="report-badge">
+                    <span class="report-icon">⚠️</span>
+                    <span>{{ review.reportCount }} report{{ review.reportCount !== 1 ? 's' : '' }}</span>
+                  </div>
+                }
+              </div>
+              <button class="action-btn" (click)="$event.stopPropagation(); viewDetails(review)">
+                View Details
+              </button>
+            </div>
+
+            <!-- Flag Reason -->
+            @if (review.flagReason) {
+              <div class="flag-reason">
+                <span class="flag-icon">🚩</span>
+                <span class="flag-text">{{ review.flagReason }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-icon">⭐</span>
+        <h3>No reviews found</h3>
+        <p>Adjust your filters or search to find reviews</p>
+      </div>
+    }
+  }
+
+  <!-- Details Modal -->
+  @if (showDetailsModal() && selectedReview()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Review Details</h2>
+          <button class="close-btn" (click)="closeModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="review-details">
+            <!-- Customer Section -->
+            <div class="details-section">
+              <h4 class="section-title">Customer Information</h4>
+              <div class="customer-profile">
+                <img [src]="selectedReview()!.customerImage" [alt]="selectedReview()!.customerName" class="profile-avatar" />
+                <div class="profile-info">
+                  <div class="profile-name">{{ selectedReview()!.customerName }}</div>
+                  <div class="profile-email">{{ selectedReview()!.customerEmail }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rating & Status -->
+            <div class="details-section">
+              <h4 class="section-title">Rating & Status</h4>
+              <div class="info-grid">
+                <div class="info-card">
+                  <span class="info-icon">⭐</span>
+                  <div class="info-content">
+                    <div class="info-label">Rating</div>
+                    <div class="rating-display" [attr.data-color]="getRatingColor(selectedReview()!.rating)">
+                      @for (star of getStars(selectedReview()!.rating); track $index) {
+                        <span class="star">{{ star }}</span>
+                      }
+                      <span class="rating-value">{{ selectedReview()!.rating }}/5</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="info-card">
+                  <span class="info-icon">📊</span>
+                  <div class="info-content">
+                    <div class="info-label">Status</div>
+                    <div class="status-badge large" [attr.data-status]="getStatusColor(selectedReview()!.status)">
+                      {{ selectedReview()!.status }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Service Details -->
+            <div class="details-section">
+              <h4 class="section-title">Service Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">✂️</span>
+                  <div>
+                    <p class="info-label">Service</p>
+                    <p class="info-value">{{ selectedReview()!.serviceName }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">👨‍💼</span>
+                  <div>
+                    <p class="info-label">Barber</p>
+                    <p class="info-value">{{ selectedReview()!.barberName }}</p>
+                    <p class="info-subvalue">{{ selectedReview()!.barberEmail }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📅</span>
+                  <div>
+                    <p class="info-label">Appointment Date</p>
+                    <p class="info-value">{{ formatDate(selectedReview()!.appointmentDate) }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">🕐</span>
+                  <div>
+                    <p class="info-label">Review Posted</p>
+                    <p class="info-value">{{ formatDate(selectedReview()!.createdAt) }}</p>
+                    <p class="info-subvalue">{{ getRelativeTime(selectedReview()!.createdAt) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Review Comment -->
+            <div class="details-section">
+              <h4 class="section-title">Customer Comment</h4>
+              <div class="comment-box">
+                <p class="comment-text">{{ selectedReview()!.comment }}</p>
+              </div>
+            </div>
+
+            <!-- Barber Response -->
+            @if (selectedReview()!.response) {
+              <div class="details-section">
+                <h4 class="section-title">Barber Response</h4>
+                <div class="response-box">
+                  <div class="response-header-detail">
+                    <span class="response-icon">💬</span>
+                    <span class="response-time">{{ formatDate(selectedReview()!.response!.respondedAt) }}</span>
+                  </div>
+                  <p class="response-text-detail">{{ selectedReview()!.response!.text }}</p>
+                </div>
+              </div>
+            }
+
+            <!-- Engagement Stats -->
+            <div class="details-section">
+              <h4 class="section-title">Engagement</h4>
+              <div class="engagement-grid">
+                <div class="engagement-card">
+                  <span class="engagement-icon">👍</span>
+                  <div class="engagement-content">
+                    <div class="engagement-value">{{ selectedReview()!.helpful }}</div>
+                    <div class="engagement-label">Helpful</div>
+                  </div>
+                </div>
+                <div class="engagement-card">
+                  <span class="engagement-icon">👎</span>
+                  <div class="engagement-content">
+                    <div class="engagement-value">{{ selectedReview()!.notHelpful }}</div>
+                    <div class="engagement-label">Not Helpful</div>
+                  </div>
+                </div>
+                <div class="engagement-card" [class.warning]="selectedReview()!.reportCount > 0">
+                  <span class="engagement-icon">⚠️</span>
+                  <div class="engagement-content">
+                    <div class="engagement-value">{{ selectedReview()!.reportCount }}</div>
+                    <div class="engagement-label">Reports</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Flag Reason -->
+            @if (selectedReview()!.flagReason) {
+              <div class="details-section">
+                <h4 class="section-title">Moderation Note</h4>
+                <div class="flag-box">
+                  <span class="flag-icon">🚩</span>
+                  <span class="flag-text">{{ selectedReview()!.flagReason }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          @if (selectedReview()!.status === 'PUBLISHED') {
+            <button class="action-btn flag" (click)="flagReview(selectedReview()!)" [disabled]="processingAction()">
+              <span class="btn-icon">🚩</span>
+              <span>Flag Review</span>
+            </button>
+            <button class="action-btn remove" (click)="removeReview(selectedReview()!)" [disabled]="processingAction()">
+              <span class="btn-icon">🚫</span>
+              <span>Remove</span>
+            </button>
+          }
+          @if (selectedReview()!.status === 'FLAGGED') {
+            <button class="action-btn publish" (click)="publishReview(selectedReview()!)" [disabled]="processingAction()">
+              <span class="btn-icon">✅</span>
+              <span>Publish</span>
+            </button>
+            <button class="action-btn remove" (click)="removeReview(selectedReview()!)" [disabled]="processingAction()">
+              <span class="btn-icon">🚫</span>
+              <span>Remove</span>
+            </button>
+          }
+          @if (selectedReview()!.status === 'REMOVED') {
+            <button class="action-btn publish" (click)="publishReview(selectedReview()!)" [disabled]="processingAction()">
+              <span class="btn-icon">✅</span>
+              <span>Restore</span>
+            </button>
+          }
+          <button class="action-btn delete" (click)="deleteReview(selectedReview()!)" [disabled]="processingAction()">
+            <span class="btn-icon">🗑️</span>
+            <span>Delete Forever</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,198 @@
+<div class="bookings-page">
+  <div class="container">
+    <div class="page-header">
+      <h1>My Appointments</h1>
+      <p>Manage your upcoming and past appointments</p>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (successMessage()) {
+      <div class="alert alert-success">
+        {{ successMessage() }}
+        <button class="alert-close" (click)="closeMessage()">✕</button>
+      </div>
+    }
+
+    @if (errorMessage()) {
+      <div class="alert alert-error">
+        {{ errorMessage() }}
+        <button class="alert-close" (click)="closeMessage()">✕</button>
+      </div>
+    }
+
+    <!-- Tabs -->
+    <div class="tabs-navigation">
+      <button
+        class="tab-button"
+        [class.active]="activeTab() === 'upcoming'"
+        (click)="setActiveTab('upcoming')"
+      >
+        Upcoming ({{ upcomingAppointments().length }})
+      </button>
+      <button
+        class="tab-button"
+        [class.active]="activeTab() === 'completed'"
+        (click)="setActiveTab('completed')"
+      >
+        Completed ({{ completedAppointments().length }})
+      </button>
+      <button
+        class="tab-button"
+        [class.active]="activeTab() === 'cancelled'"
+        (click)="setActiveTab('cancelled')"
+      >
+        Cancelled ({{ cancelledAppointments().length }})
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    @if (loading()) {
+      <div class="loading-container">
+        <div class="spinner-large"></div>
+        <p>Loading your appointments...</p>
+      </div>
+    } @else {
+      <!-- Appointments List -->
+      <div class="appointments-list">
+        @if (getDisplayedAppointments().length > 0) {
+          @for (appointment of getDisplayedAppointments(); track appointment.id) {
+            <div class="appointment-card">
+              <!-- Card Header -->
+              <div class="card-header">
+                <div class="barber-info">
+                  <img
+                    [src]="getBarberImage(appointment)"
+                    [alt]="getBarberFullName(appointment)"
+                    class="barber-avatar"
+                    (click)="viewBarberProfile(appointment.barberId)"
+                  />
+                  <div class="barber-details">
+                    <h3
+                      class="barber-name"
+                      (click)="viewBarberProfile(appointment.barberId)"
+                    >
+                      {{ getBarberFullName(appointment) }}
+                    </h3>
+                    <div class="barber-rating">
+                      @if (appointment.barber?.rating) {
+                        <span>⭐ {{ appointment.barber?.rating }}</span>
+                      }
+                      @if (appointment.barber?.city) {
+                        <span class="location">📍 {{ appointment.barber?.city }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="status-badge" [class]="getStatusColor(appointment.status)">
+                  {{ getStatusLabel(appointment.status) }}
+                </div>
+              </div>
+
+              <!-- Card Body -->
+              <div class="card-body">
+                <div class="appointment-details">
+                  <div class="detail-item">
+                    <span class="detail-icon">✂️</span>
+                    <div class="detail-content">
+                      <div class="detail-label">Service</div>
+                      <div class="detail-value">{{ appointment.service?.name }}</div>
+                    </div>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-icon">📅</span>
+                    <div class="detail-content">
+                      <div class="detail-label">Date</div>
+                      <div class="detail-value">{{ formatDate(appointment.appointmentDate) }}</div>
+                    </div>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-icon">⏰</span>
+                    <div class="detail-content">
+                      <div class="detail-label">Time</div>
+                      <div class="detail-value">{{ formatTime(appointment.appointmentDate) }}</div>
+                    </div>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-icon">⏱️</span>
+                    <div class="detail-content">
+                      <div class="detail-label">Duration</div>
+                      <div class="detail-value">{{ appointment.service?.duration }} min</div>
+                    </div>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-icon">💰</span>
+                    <div class="detail-content">
+                      <div class="detail-label">Price</div>
+                      <div class="detail-value price">${{ appointment.totalPrice }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                @if (appointment.notes) {
+                  <div class="appointment-notes">
+                    <strong>Notes:</strong> {{ appointment.notes }}
+                  </div>
+                }
+              </div>
+
+              <!-- Card Actions -->
+              <div class="card-actions">
+                <a
+                  routerLink="/barbers/{{ appointment.barberId }}"
+                  class="btn btn-secondary-small"
+                >
+                  View Barber
+                </a>
+
+                @if (canCancelAppointment(appointment)) {
+                  <button
+                    class="btn btn-danger-small"
+                    (click)="cancelAppointment(appointment)"
+                  >
+                    Cancel Appointment
+                  </button>
+                }
+
+                @if (canWriteReview(appointment)) {
+                  <button
+                    class="btn btn-primary-small"
+                    (click)="writeReview(appointment)"
+                  >
+                    ⭐ Write Review
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        } @else {
+          <div class="empty-state">
+            @if (activeTab() === 'upcoming') {
+              <div class="empty-icon">📅</div>
+              <h2>No Upcoming Appointments</h2>
+              <p>You don't have any upcoming appointments scheduled.</p>
+              <a routerLink="/barbers/search" class="btn btn-primary">
+                Find a Barber
+              </a>
+            }
+
+            @if (activeTab() === 'completed') {
+              <div class="empty-icon">✓</div>
+              <h2>No Completed Appointments</h2>
+              <p>Your completed appointments will appear here.</p>
+            }
+
+            @if (activeTab() === 'cancelled') {
+              <div class="empty-icon">✕</div>
+              <h2>No Cancelled Appointments</h2>
+              <p>Your cancelled appointments will appear here.</p>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

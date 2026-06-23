@@ -1,0 +1,161 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <!-- Logo -->
+    <a routerLink="/" class="navbar-logo" (click)="closeMenus()">
+      <span class="logo-icon">✂️</span>
+      <span class="logo-text">Barberly</span>
+    </a>
+
+    <!-- Desktop Navigation -->
+    <div class="navbar-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
+        Home
+      </a>
+      <a routerLink="/barbers/search" routerLinkActive="active" class="nav-link">
+        Find Barbers
+      </a>
+
+      @if (authService.isAuthenticated()) {
+        @if (authService.isCustomer()) {
+          <a routerLink="/my/bookings" routerLinkActive="active" class="nav-link">
+            My Bookings
+          </a>
+        }
+        @if (authService.isBarber()) {
+          <a routerLink="/barber/dashboard" routerLinkActive="active" class="nav-link">
+            Dashboard
+          </a>
+          <a routerLink="/barber/appointments" routerLinkActive="active" class="nav-link">
+            Appointments
+          </a>
+        }
+      }
+    </div>
+
+    <!-- Desktop Auth Buttons -->
+    <div class="navbar-actions">
+      @if (authService.isAuthenticated()) {
+        <div class="user-menu-container">
+          <button class="user-menu-button" (click)="toggleUserMenu()">
+            <span class="user-avatar">
+              {{ authService.currentUser()?.firstName?.charAt(0) }}{{ authService.currentUser()?.lastName?.charAt(0) }}
+            </span>
+            <span class="user-name">{{ authService.userFullName() }}</span>
+            <span class="chevron">▼</span>
+          </button>
+
+          @if (userMenuOpen()) {
+            <div class="user-menu-dropdown">
+              <div class="user-menu-header">
+                <div class="user-menu-name">{{ authService.userFullName() }}</div>
+                <div class="user-menu-email">{{ authService.currentUser()?.email }}</div>
+              </div>
+              
+              <div class="user-menu-divider"></div>
+              
+              <button class="user-menu-item" (click)="navigateToDashboard()">
+                <span class="menu-icon">📊</span>
+                {{ authService.isBarber() ? 'Dashboard' : 'My Bookings' }}
+              </button>
+              
+              @if (authService.isCustomer()) {
+                <a routerLink="/my/reviews" class="user-menu-item" (click)="closeMenus()">
+                  <span class="menu-icon">⭐</span>
+                  My Reviews
+                </a>
+              }
+              
+              @if (authService.isBarber()) {
+                <a routerLink="/barber/reviews" class="user-menu-item" (click)="closeMenus()">
+                  <span class="menu-icon">⭐</span>
+                  Reviews
+                </a>
+                <a routerLink="/barber/services" class="user-menu-item" (click)="closeMenus()">
+                  <span class="menu-icon">✂️</span>
+                  Services
+                </a>
+              }
+              
+              <div class="user-menu-divider"></div>
+              
+              <button class="user-menu-item logout" (click)="logout()">
+                <span class="menu-icon">🚪</span>
+                Logout
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <a routerLink="/auth/login" class="btn btn-outline">Login</a>
+        <a routerLink="/auth/register" class="btn btn-primary">Sign Up</a>
+      }
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-button" (click)="toggleMobileMenu()">
+      @if (mobileMenuOpen()) {
+        <span class="icon">✕</span>
+      } @else {
+        <span class="icon">☰</span>
+      }
+    </button>
+  </div>
+
+  <!-- Mobile Navigation -->
+  @if (mobileMenuOpen()) {
+    <div class="mobile-menu">
+      <div class="mobile-menu-links">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="mobile-nav-link" (click)="closeMenus()">
+          Home
+        </a>
+        <a routerLink="/barbers/search" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+          Find Barbers
+        </a>
+
+        @if (authService.isAuthenticated()) {
+          @if (authService.isCustomer()) {
+            <a routerLink="/my/bookings" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+              My Bookings
+            </a>
+            <a routerLink="/my/reviews" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+              My Reviews
+            </a>
+          }
+          @if (authService.isBarber()) {
+            <a routerLink="/barber/dashboard" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+              Dashboard
+            </a>
+            <a routerLink="/barber/appointments" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+              Appointments
+            </a>
+            <a routerLink="/barber/reviews" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+              Reviews
+            </a>
+            <a routerLink="/barber/services" routerLinkActive="active" class="mobile-nav-link" (click)="closeMenus()">
+              Services
+            </a>
+          }
+          
+          <div class="mobile-menu-divider"></div>
+          
+          <div class="mobile-user-info">
+            <div class="mobile-user-name">{{ authService.userFullName() }}</div>
+            <div class="mobile-user-email">{{ authService.currentUser()?.email }}</div>
+          </div>
+          
+          <button class="mobile-nav-link logout" (click)="logout()">
+            Logout
+          </button>
+        } @else {
+          <div class="mobile-menu-divider"></div>
+          <a routerLink="/auth/login" class="mobile-nav-link" (click)="closeMenus()">
+            Login
+          </a>
+          <a routerLink="/auth/register" class="mobile-nav-link primary" (click)="closeMenus()">
+            Sign Up
+          </a>
+        }
+      </div>
+    </div>
+  }
+</nav>

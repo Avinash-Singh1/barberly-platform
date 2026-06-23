@@ -1,0 +1,201 @@
+<div class="admin-dashboard">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div>
+      <h1 class="page-title">Admin Dashboard</h1>
+      <p class="page-subtitle">Welcome back! Here's what's happening with your platform today.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary">
+        <span class="icon">📊</span>
+        <span>Export Report</span>
+      </button>
+      <button class="btn-primary">
+        <span class="icon">⚙️</span>
+        <span>Settings</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading dashboard...</p>
+    </div>
+  }
+
+  <!-- Dashboard Content -->
+  @if (!loading()) {
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      @for (stat of stats(); track stat.title) {
+        <a [routerLink]="stat.route" class="stat-card" [attr.data-color]="stat.color">
+          <div class="stat-icon">{{ stat.icon }}</div>
+          <div class="stat-content">
+            <p class="stat-label">{{ stat.title }}</p>
+            <h3 class="stat-value">
+              @if (stat.title.includes('Revenue')) {
+                {{ formatCurrency(stat.value) }}
+              } @else {
+                {{ formatNumber(stat.value) }}
+              }
+            </h3>
+            <div class="stat-change" [class.positive]="stat.change > 0" [class.negative]="stat.change < 0">
+              <span class="change-icon">{{ stat.change > 0 ? '↑' : '↓' }}</span>
+              <span class="change-value">{{ Math.abs(stat.change) }}%</span>
+              <span class="change-label">vs last month</span>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+      <!-- Revenue Chart -->
+      <div class="chart-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Weekly Revenue</h2>
+            <p class="card-subtitle">Last 7 days performance</p>
+          </div>
+          <div class="revenue-total">
+            <span class="total-label">Total</span>
+            <span class="total-value">{{ formatCurrency(totalRevenue()) }}</span>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-bars">
+            @for (item of revenueData(); track item.label) {
+              <div class="bar-wrapper">
+                <div class="bar-container">
+                  <div 
+                    class="bar" 
+                    [style.height.%]="getBarHeight(item.value)"
+                    [title]="formatCurrency(item.value)"
+                  >
+                    <span class="bar-value">{{ formatCurrency(item.value) }}</span>
+                  </div>
+                </div>
+                <span class="bar-label">{{ item.label }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="activity-card">
+        <div class="card-header">
+          <h2 class="card-title">Recent Activity</h2>
+          <button class="view-all-btn">View All</button>
+        </div>
+
+        <div class="activity-list">
+          @for (activity of recentActivity(); track activity.id) {
+            <div class="activity-item" [attr.data-type]="activity.type">
+              <div class="activity-icon" [attr.data-color]="getActivityColor(activity.type)">
+                {{ getActivityIcon(activity.type) }}
+              </div>
+              <div class="activity-content">
+                <p class="activity-message">{{ activity.message }}</p>
+                <span class="activity-time">{{ getRelativeTime(activity.timestamp) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (recentActivity().length === 0) {
+          <div class="empty-state">
+            <span class="empty-icon">📭</span>
+            <p>No recent activity</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="actions-grid">
+        <a routerLink="/admin/barbers" class="action-card">
+          <span class="action-icon">✂️</span>
+          <h3 class="action-title">Approve Barbers</h3>
+          <p class="action-description">Review and approve pending barber registrations</p>
+          <span class="action-badge">12 pending</span>
+        </a>
+
+        <a routerLink="/admin/reviews" class="action-card">
+          <span class="action-icon">⭐</span>
+          <h3 class="action-title">Moderate Reviews</h3>
+          <p class="action-description">Check flagged reviews and user reports</p>
+          <span class="action-badge">3 flagged</span>
+        </a>
+
+        <a routerLink="/admin/cms" class="action-card">
+          <span class="action-icon">📝</span>
+          <h3 class="action-title">Manage Content</h3>
+          <p class="action-description">Update banners, FAQs, and blog posts</p>
+        </a>
+
+        <a routerLink="/admin/settings" class="action-card">
+          <span class="action-icon">⚙️</span>
+          <h3 class="action-title">System Settings</h3>
+          <p class="action-description">Configure platform rules and policies</p>
+        </a>
+      </div>
+    </div>
+
+    <!-- Platform Health -->
+    <div class="health-section">
+      <h2 class="section-title">Platform Health</h2>
+      <div class="health-grid">
+        <div class="health-card">
+          <div class="health-header">
+            <span class="health-icon">🚀</span>
+            <span class="health-label">System Status</span>
+          </div>
+          <div class="health-status online">
+            <span class="status-dot"></span>
+            <span class="status-text">All Systems Operational</span>
+          </div>
+        </div>
+
+        <div class="health-card">
+          <div class="health-header">
+            <span class="health-icon">⚡</span>
+            <span class="health-label">Response Time</span>
+          </div>
+          <div class="health-metric">
+            <span class="metric-value">142ms</span>
+            <span class="metric-label">Average API response</span>
+          </div>
+        </div>
+
+        <div class="health-card">
+          <div class="health-header">
+            <span class="health-icon">✅</span>
+            <span class="health-label">Success Rate</span>
+          </div>
+          <div class="health-metric">
+            <span class="metric-value">99.8%</span>
+            <span class="metric-label">Last 24 hours</span>
+          </div>
+        </div>
+
+        <div class="health-card">
+          <div class="health-header">
+            <span class="health-icon">📊</span>
+            <span class="health-label">Database</span>
+          </div>
+          <div class="health-metric">
+            <span class="metric-value">2.4GB</span>
+            <span class="metric-label">Storage used</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,489 @@
+<div class="admin-services">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Services Catalog</h1>
+      <p class="page-subtitle">Manage platform-wide service templates and categories</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="openCreateCategory()">
+        <span class="icon">📁</span>
+        <span>Add Category</span>
+      </button>
+      <button class="btn-primary" (click)="openCreateService()">
+        <span class="icon">+</span>
+        <span>Add Service</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Total Services</span>
+      <span class="stat-value">{{ totalServices() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Active</span>
+      <span class="stat-value" data-status="active">{{ activeServices() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Inactive</span>
+      <span class="stat-value" data-status="inactive">{{ inactiveServices() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Categories</span>
+      <span class="stat-value" data-status="categories">{{ totalCategories() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Total Usage</span>
+      <span class="stat-value" data-status="usage">{{ totalUsage() }}</span>
+    </div>
+  </div>
+
+  <!-- Search & Filters -->
+  <div class="filters-section">
+    <div class="search-bar">
+      <input 
+        type="text" 
+        placeholder="Search services by name, description, or category..." 
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input"
+      />
+      <span class="search-icon">🔍</span>
+    </div>
+
+    <div class="category-filters">
+      <button 
+        class="category-btn"
+        [class.active]="selectedCategory() === 'ALL'"
+        (click)="setCategoryFilter('ALL')"
+      >
+        <span class="cat-icon">📋</span>
+        <span>All Services</span>
+      </button>
+      @for (category of categories(); track category.id) {
+        <button 
+          class="category-btn"
+          [class.active]="selectedCategory() === category.name"
+          (click)="setCategoryFilter(category.name)"
+        >
+          <span class="cat-icon">{{ category.icon }}</span>
+          <span>{{ category.name }}</span>
+          <span class="cat-count">({{ category.serviceCount }})</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading services...</p>
+    </div>
+  }
+
+  <!-- Services Grid -->
+  @if (!loading()) {
+    @if (filteredServices().length > 0) {
+      <div class="services-grid">
+        @for (service of filteredServices(); track service.id) {
+          <div class="service-card" (click)="viewServiceDetails(service)">
+            <!-- Status Badge -->
+            <div class="status-badge" [attr.data-status]="service.isActive ? 'active' : 'inactive'">
+              {{ service.isActive ? 'ACTIVE' : 'INACTIVE' }}
+            </div>
+
+            <!-- Service Header -->
+            <div class="service-header">
+              <h3 class="service-name">{{ service.name }}</h3>
+              <div class="service-category">
+                <span class="category-icon">{{ getCategoryIcon(service.category) }}</span>
+                <span>{{ service.category }}</span>
+              </div>
+            </div>
+
+            <!-- Service Description -->
+            <p class="service-description">{{ service.description }}</p>
+
+            <!-- Service Info -->
+            <div class="service-info">
+              <div class="info-row">
+                <span class="info-label">💰 Price Range:</span>
+                <span class="info-value">{{ formatPrice(service.suggestedPrice.min) }} - {{ formatPrice(service.suggestedPrice.max) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">🕐 Duration:</span>
+                <span class="info-value">{{ formatDuration(service.suggestedDuration.min) }} - {{ formatDuration(service.suggestedDuration.max) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">👥 Used by:</span>
+                <span class="info-value">{{ service.usageCount }} barber{{ service.usageCount !== 1 ? 's' : '' }}</span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card-actions">
+              <button class="action-btn" (click)="$event.stopPropagation(); openEditService(service)">
+                ✏️ Edit
+              </button>
+              <button class="action-btn" (click)="$event.stopPropagation(); viewServiceDetails(service)">
+                👁️ View
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-icon">✂️</span>
+        <h3>No services found</h3>
+        <p>Create your first service template or adjust your filters</p>
+        <button class="btn-primary" (click)="openCreateService()">
+          Add Service Template
+        </button>
+      </div>
+    }
+  }
+
+  <!-- Service Details Modal -->
+  @if (showServiceDetails() && selectedService()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Service Template Details</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="service-details">
+            <!-- Header -->
+            <div class="details-header">
+              <h3 class="service-title">{{ selectedService()!.name }}</h3>
+              <div class="status-badge large" [attr.data-status]="selectedService()!.isActive ? 'active' : 'inactive'">
+                {{ selectedService()!.isActive ? 'ACTIVE' : 'INACTIVE' }}
+              </div>
+            </div>
+
+            <!-- Category -->
+            <div class="details-section">
+              <h4 class="section-title">Category</h4>
+              <div class="category-display">
+                <span class="category-icon-large">{{ getCategoryIcon(selectedService()!.category) }}</span>
+                <span class="category-name">{{ selectedService()!.category }}</span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="details-section">
+              <h4 class="section-title">Description</h4>
+              <p class="description-text">{{ selectedService()!.description }}</p>
+            </div>
+
+            <!-- Pricing -->
+            <div class="details-section">
+              <h4 class="section-title">Suggested Pricing</h4>
+              <div class="range-display">
+                <div class="range-item">
+                  <span class="range-label">Minimum</span>
+                  <span class="range-value">{{ formatPrice(selectedService()!.suggestedPrice.min) }}</span>
+                </div>
+                <span class="range-separator">→</span>
+                <div class="range-item">
+                  <span class="range-label">Maximum</span>
+                  <span class="range-value">{{ formatPrice(selectedService()!.suggestedPrice.max) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duration -->
+            <div class="details-section">
+              <h4 class="section-title">Suggested Duration</h4>
+              <div class="range-display">
+                <div class="range-item">
+                  <span class="range-label">Minimum</span>
+                  <span class="range-value">{{ formatDuration(selectedService()!.suggestedDuration.min) }}</span>
+                </div>
+                <span class="range-separator">→</span>
+                <div class="range-item">
+                  <span class="range-label">Maximum</span>
+                  <span class="range-value">{{ formatDuration(selectedService()!.suggestedDuration.max) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Usage Stats -->
+            <div class="details-section">
+              <h4 class="section-title">Usage Statistics</h4>
+              <div class="usage-stats">
+                <div class="usage-card">
+                  <span class="usage-icon">👥</span>
+                  <div class="usage-content">
+                    <div class="usage-value">{{ selectedService()!.usageCount }}</div>
+                    <div class="usage-label">Barbers Using</div>
+                  </div>
+                </div>
+                <div class="usage-card">
+                  <span class="usage-icon">📅</span>
+                  <div class="usage-content">
+                    <div class="usage-value">{{ formatDate(selectedService()!.createdAt) }}</div>
+                    <div class="usage-label">Created</div>
+                  </div>
+                </div>
+                <div class="usage-card">
+                  <span class="usage-icon">🔄</span>
+                  <div class="usage-content">
+                    <div class="usage-value">{{ formatDate(selectedService()!.updatedAt) }}</div>
+                    <div class="usage-label">Last Updated</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn edit" (click)="openEditService(selectedService()!)">
+            <span class="btn-icon">✏️</span>
+            <span>Edit</span>
+          </button>
+          @if (selectedService()!.isActive) {
+            <button class="action-btn deactivate" (click)="toggleServiceStatus(selectedService()!)">
+              <span class="btn-icon">⏸</span>
+              <span>Deactivate</span>
+            </button>
+          } @else {
+            <button class="action-btn activate" (click)="toggleServiceStatus(selectedService()!)">
+              <span class="btn-icon">▶</span>
+              <span>Activate</span>
+            </button>
+          }
+          <button class="action-btn delete" (click)="deleteService(selectedService()!)">
+            <span class="btn-icon">🗑️</span>
+            <span>Delete</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Service Form Modal -->
+  @if (showServiceModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isEditMode() ? 'Edit Service Template' : 'Create Service Template' }}</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="serviceForm" class="service-form">
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h4 class="form-section-title">Basic Information</h4>
+              
+              <div class="form-field">
+                <label class="form-label">Service Name *</label>
+                <input 
+                  type="text" 
+                  formControlName="name" 
+                  class="form-input"
+                  placeholder="e.g., Classic Haircut"
+                />
+                @if (serviceForm.get('name')?.invalid && serviceForm.get('name')?.touched) {
+                  <span class="field-error">Service name is required (3-100 characters)</span>
+                }
+              </div>
+
+              <div class="form-field">
+                <label class="form-label">Category *</label>
+                <select formControlName="category" class="form-select">
+                  @for (category of categories(); track category.id) {
+                    <option [value]="category.name">{{ category.icon }} {{ category.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label class="form-label">Description *</label>
+                <textarea 
+                  formControlName="description" 
+                  class="form-textarea"
+                  rows="3"
+                  placeholder="Describe the service..."
+                ></textarea>
+                @if (serviceForm.get('description')?.invalid && serviceForm.get('description')?.touched) {
+                  <span class="field-error">Description is required (10-500 characters)</span>
+                }
+              </div>
+            </div>
+
+            <!-- Pricing -->
+            <div class="form-section">
+              <h4 class="form-section-title">Suggested Price Range</h4>
+              
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Minimum Price ($) *</label>
+                  <input 
+                    type="number" 
+                    formControlName="minPrice" 
+                    class="form-input"
+                    min="1"
+                    step="1"
+                    placeholder="15"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Maximum Price ($) *</label>
+                  <input 
+                    type="number" 
+                    formControlName="maxPrice" 
+                    class="form-input"
+                    min="1"
+                    step="1"
+                    placeholder="50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Duration -->
+            <div class="form-section">
+              <h4 class="form-section-title">Suggested Duration Range</h4>
+              
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Minimum Duration (minutes) *</label>
+                  <input 
+                    type="number" 
+                    formControlName="minDuration" 
+                    class="form-input"
+                    min="15"
+                    step="15"
+                    placeholder="30"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Maximum Duration (minutes) *</label>
+                  <input 
+                    type="number" 
+                    formControlName="maxDuration" 
+                    class="form-input"
+                    min="15"
+                    step="15"
+                    placeholder="60"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="form-section">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="isActive" />
+                <span class="toggle-label">Service Template is Active</span>
+              </label>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-actions">
+          <button 
+            class="action-btn save" 
+            (click)="saveService()"
+            [disabled]="processingAction()"
+          >
+            <span class="btn-icon">💾</span>
+            <span>{{ isEditMode() ? 'Update' : 'Create' }} Template</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Category Form Modal -->
+  @if (showCategoryModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isCategoryEdit() ? 'Edit Category' : 'Create Category' }}</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="categoryForm" class="category-form">
+            <div class="form-field">
+              <label class="form-label">Category Name *</label>
+              <input 
+                type="text" 
+                formControlName="name" 
+                class="form-input"
+                placeholder="e.g., Haircut"
+              />
+              @if (categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched) {
+                <span class="field-error">Category name is required (2-50 characters)</span>
+              }
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Description *</label>
+              <textarea 
+                formControlName="description" 
+                class="form-textarea"
+                rows="2"
+                placeholder="Describe the category..."
+              ></textarea>
+              @if (categoryForm.get('description')?.invalid && categoryForm.get('description')?.touched) {
+                <span class="field-error">Description is required (10-200 characters)</span>
+              }
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Icon *</label>
+              <div class="icon-selector">
+                @for (icon of categoryIcons; track icon) {
+                  <label class="icon-option">
+                    <input 
+                      type="radio" 
+                      formControlName="icon" 
+                      [value]="icon"
+                    />
+                    <span class="icon-display">{{ icon }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="isActive" />
+              <span class="toggle-label">Category is Active</span>
+            </label>
+          </form>
+        </div>
+
+        <div class="modal-actions">
+          <button 
+            class="action-btn save" 
+            (click)="saveCategory()"
+            [disabled]="processingAction()"
+          >
+            <span class="btn-icon">💾</span>
+            <span>{{ isCategoryEdit() ? 'Update' : 'Create' }} Category</span>
+          </button>
+          @if (isCategoryEdit()) {
+            <button class="action-btn delete" (click)="deleteCategory(selectedCategoryItem()!)">
+              <span class="btn-icon">🗑️</span>
+              <span>Delete</span>
+            </button>
+          }
+          <button class="action-btn secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,419 @@
+<div class="admin-shops">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Shop Management</h1>
+      <p class="page-subtitle">Create and manage barbershops on the platform</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateForm()">
+      <span class="icon">+</span>
+      <span>Add New Shop</span>
+    </button>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Total Shops</span>
+      <span class="stat-value">{{ totalShops() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Active</span>
+      <span class="stat-value" data-status="active">{{ activeShops() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Inactive</span>
+      <span class="stat-value" data-status="inactive">{{ inactiveShops() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Total Barbers</span>
+      <span class="stat-value" data-status="barbers">{{ totalBarbersAssigned() }}</span>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <input 
+      type="text" 
+      placeholder="Search by name, city, or address..." 
+      [value]="searchQuery()"
+      (input)="onSearchChange($event)"
+      class="search-input"
+    />
+    <span class="search-icon">🔍</span>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading shops...</p>
+    </div>
+  }
+
+  <!-- Shops Grid -->
+  @if (!loading()) {
+    @if (filteredShops().length > 0) {
+      <div class="shops-grid">
+        @for (shop of filteredShops(); track shop.id) {
+          <div class="shop-card" (click)="viewDetails(shop)">
+            <!-- Shop Image -->
+            <div class="shop-image" [style.background-image]="'url(' + shop.imageUrl + ')'">
+              <div class="status-badge" [attr.data-status]="shop.isActive ? 'active' : 'inactive'">
+                {{ shop.isActive ? 'ACTIVE' : 'INACTIVE' }}
+              </div>
+            </div>
+
+            <!-- Shop Info -->
+            <div class="shop-info">
+              <h3 class="shop-name">{{ shop.name }}</h3>
+              <p class="shop-address">
+                <span class="icon">📍</span>
+                {{ shop.address }}, {{ shop.city }}, {{ shop.state }}
+              </p>
+
+              <!-- Stats -->
+              <div class="shop-stats">
+                @if (shop.rating > 0) {
+                  <div class="stat-item">
+                    <span class="icon">⭐</span>
+                    <span>{{ shop.rating.toFixed(1) }} ({{ shop.totalReviews }})</span>
+                  </div>
+                }
+                <div class="stat-item">
+                  <span class="icon">✂️</span>
+                  <span>{{ shop.totalBarbers }} barber{{ shop.totalBarbers !== 1 ? 's' : '' }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="icon">🕐</span>
+                  <span>{{ formatTime(shop.openTime) }} - {{ formatTime(shop.closeTime) }}</span>
+                </div>
+              </div>
+
+              <!-- Amenities Preview -->
+              @if (shop.amenities.length > 0) {
+                <div class="amenities-preview">
+                  @for (amenity of shop.amenities.slice(0, 3); track amenity) {
+                    <span class="amenity-tag">{{ amenity }}</span>
+                  }
+                  @if (shop.amenities.length > 3) {
+                    <span class="amenity-tag more">+{{ shop.amenities.length - 3 }}</span>
+                  }
+                </div>
+              }
+
+              <!-- Actions -->
+              <div class="card-actions">
+                <button class="action-btn" (click)="$event.stopPropagation(); openEditForm(shop)">
+                  Edit
+                </button>
+                <button class="action-btn" (click)="$event.stopPropagation(); openBarberAssignment(shop)">
+                  Barbers
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-icon">🏪</span>
+        <h3>No shops found</h3>
+        <p>Create your first shop or adjust your search</p>
+        <button class="btn-primary" (click)="openCreateForm()">
+          Add New Shop
+        </button>
+      </div>
+    }
+  }
+
+  <!-- Details Modal -->
+  @if (showDetailsModal() && selectedShop()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Shop Details</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="shop-details">
+            <!-- Header with Image -->
+            <div class="details-header">
+              <div class="header-image" [style.background-image]="'url(' + selectedShop()!.imageUrl + ')'"></div>
+              <div class="header-info">
+                <h3 class="shop-title">{{ selectedShop()!.name }}</h3>
+                <div class="status-badge large" [attr.data-status]="selectedShop()!.isActive ? 'active' : 'inactive'">
+                  {{ selectedShop()!.isActive ? 'ACTIVE' : 'INACTIVE' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Location -->
+            <div class="details-section">
+              <h4 class="section-title">Location</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">📍</span>
+                  <div>
+                    <p class="info-label">Address</p>
+                    <p class="info-value">{{ selectedShop()!.address }}</p>
+                    <p class="info-value">{{ selectedShop()!.city }}, {{ selectedShop()!.state }} {{ selectedShop()!.zipCode }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="details-section">
+              <h4 class="section-title">Contact Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">📱</span>
+                  <div>
+                    <p class="info-label">Phone</p>
+                    <p class="info-value">{{ selectedShop()!.phone }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📧</span>
+                  <div>
+                    <p class="info-label">Email</p>
+                    <p class="info-value">{{ selectedShop()!.email }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hours -->
+            <div class="details-section">
+              <h4 class="section-title">Operating Hours</h4>
+              <div class="hours-display">
+                <span class="hours-icon">🕐</span>
+                <span class="hours-text">{{ formatTime(selectedShop()!.openTime) }} - {{ formatTime(selectedShop()!.closeTime) }}</span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="details-section">
+              <h4 class="section-title">Description</h4>
+              <p class="description-text">{{ selectedShop()!.description }}</p>
+            </div>
+
+            <!-- Amenities -->
+            @if (selectedShop()!.amenities.length > 0) {
+              <div class="details-section">
+                <h4 class="section-title">Amenities</h4>
+                <div class="amenities-list">
+                  @for (amenity of selectedShop()!.amenities; track amenity) {
+                    <span class="amenity-badge">{{ amenity }}</span>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Assigned Barbers -->
+            <div class="details-section">
+              <h4 class="section-title">Assigned Barbers ({{ selectedShop()!.totalBarbers }})</h4>
+              @if (selectedShop()!.assignedBarbers.length > 0) {
+                <div class="barbers-list">
+                  @for (barber of selectedShop()!.assignedBarbers; track barber.id) {
+                    <div class="barber-item">
+                      <span class="barber-icon">✂️</span>
+                      <div class="barber-info">
+                        <div class="barber-name">{{ barber.name }}</div>
+                        <div class="barber-email">{{ barber.email }}</div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="no-barbers">No barbers assigned yet</p>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn edit" (click)="openEditForm(selectedShop()!)">
+            <span class="btn-icon">✏️</span>
+            <span>Edit Shop</span>
+          </button>
+          <button class="action-btn assign" (click)="openBarberAssignment(selectedShop()!)">
+            <span class="btn-icon">✂️</span>
+            <span>Manage Barbers</span>
+          </button>
+          @if (selectedShop()!.isActive) {
+            <button class="action-btn deactivate" (click)="toggleShopStatus(selectedShop()!)">
+              <span class="btn-icon">⏸</span>
+              <span>Deactivate</span>
+            </button>
+          } @else {
+            <button class="action-btn activate" (click)="toggleShopStatus(selectedShop()!)">
+              <span class="btn-icon">▶</span>
+              <span>Activate</span>
+            </button>
+          }
+          <button class="action-btn delete" (click)="deleteShop(selectedShop()!)">
+            <span class="btn-icon">🗑️</span>
+            <span>Delete</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Form Modal (Create/Edit) -->
+  @if (showFormModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-content large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isEditMode() ? 'Edit Shop' : 'Create New Shop' }}</h2>
+          <button class="close-btn" (click)="closeModals()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="shopForm" class="shop-form">
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h4 class="form-section-title">Basic Information</h4>
+              
+              <div class="form-field">
+                <label class="form-label">Shop Name *</label>
+                <input 
+                  type="text" 
+                  formControlName="name" 
+                  class="form-input"
+                  placeholder="e.g., Downtown Barbershop"
+                />
+                @if (shopForm.get('name')?.invalid && shopForm.get('name')?.touched) {
+                  <span class="field-error">Shop name is required (min 3 characters)</span>
+                }
+              </div>
+
+              <div class="form-field">
+                <label class="form-label">Description *</label>
+                <textarea 
+                  formControlName="description" 
+                  class="form-textarea"
+                  rows="3"
+                  placeholder="Describe your shop..."
+                ></textarea>
+                @if (shopForm.get('description')?.invalid && shopForm.get('description')?.touched) {
+                  <span class="field-error">Description is required (min 10 characters)</span>
+                }
+              </div>
+            </div>
+
+            <!-- Location -->
+            <div class="form-section">
+              <h4 class="form-section-title">Location</h4>
+              
+              <div class="form-field">
+                <label class="form-label">Address *</label>
+                <input 
+                  type="text" 
+                  formControlName="address" 
+                  class="form-input"
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">City *</label>
+                  <input type="text" formControlName="city" class="form-input" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">State *</label>
+                  <input type="text" formControlName="state" class="form-input" placeholder="NY" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Zip Code *</label>
+                  <input type="text" formControlName="zipCode" class="form-input" placeholder="10001" />
+                  @if (shopForm.get('zipCode')?.invalid && shopForm.get('zipCode')?.touched) {
+                    <span class="field-error">Valid 5-digit zip code required</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="form-section">
+              <h4 class="form-section-title">Contact Information</h4>
+              
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Phone *</label>
+                  <input type="tel" formControlName="phone" class="form-input" placeholder="+1 (555) 123-4567" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Email *</label>
+                  <input type="email" formControlName="email" class="form-input" placeholder="shop@example.com" />
+                  @if (shopForm.get('email')?.invalid && shopForm.get('email')?.touched) {
+                    <span class="field-error">Valid email required</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Hours -->
+            <div class="form-section">
+              <h4 class="form-section-title">Operating Hours</h4>
+              
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Opening Time *</label>
+                  <input type="time" formControlName="openTime" class="form-input" />
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Closing Time *</label>
+                  <input type="time" formControlName="closeTime" class="form-input" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Amenities -->
+            <div class="form-section">
+              <h4 class="form-section-title">Amenities</h4>
+              
+              <div class="amenities-selector">
+                @for (amenity of availableAmenities; track amenity) {
+                  <label class="amenity-checkbox">
+                    <input 
+                      type="checkbox" 
+                      [checked]="isAmenitySelected(amenity)"
+                      (change)="toggleAmenity(amenity)"
+                    />
+                    <span class="checkbox-label">{{ amenity }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="form-section">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="isActive" />
+                <span class="toggle-label">Shop is Active</span>
+              </label>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-actions">
+          <button 
+            class="action-btn save" 
+            (click)="saveShop()"
+            [disabled]="processingAction()"
+          >
+            <span class="btn-icon">💾</span>
+            <span>{{ isEditMode() ? 'Update Shop' : 'Create Shop' }}</span>
+          </button>
+          <button class="action-btn secondary" (click)="closeModals()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

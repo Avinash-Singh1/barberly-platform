@@ -1,0 +1,286 @@
+<div class="admin-customers">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Customer Management</h1>
+      <p class="page-subtitle">Manage customer accounts and activity</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item" [class.active]="selectedFilter() === 'ALL'" (click)="setFilter('ALL')">
+      <span class="stat-label">Total Customers</span>
+      <span class="stat-value">{{ totalCustomers() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedFilter() === 'ACTIVE'" (click)="setFilter('ACTIVE')">
+      <span class="stat-label">Active</span>
+      <span class="stat-value" data-status="active">{{ activeCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedFilter() === 'BLOCKED'" (click)="setFilter('BLOCKED')">
+      <span class="stat-label">Blocked</span>
+      <span class="stat-value" data-status="blocked">{{ blockedCount() }}</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Total Revenue</span>
+      <span class="stat-value" data-status="revenue">{{ formatCurrency(totalRevenue()) }}</span>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <input 
+      type="text" 
+      placeholder="Search by name, email, or phone..." 
+      [value]="searchQuery()"
+      (input)="onSearchChange($event)"
+      class="search-input"
+    />
+    <span class="search-icon">🔍</span>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading customers...</p>
+    </div>
+  }
+
+  <!-- Customers List -->
+  @if (!loading()) {
+    @if (filteredCustomers().length > 0) {
+      <div class="customers-grid">
+        @for (customer of filteredCustomers(); track customer.id) {
+          <div class="customer-card" (click)="viewDetails(customer)">
+            <!-- Profile Header -->
+            <div class="customer-header">
+              <img [src]="customer.profileImage" [alt]="customer.name" class="customer-avatar" />
+              <div class="status-badge" [attr.data-status]="customer.status.toLowerCase()">
+                {{ customer.status }}
+              </div>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="customer-info">
+              <h3 class="customer-name">{{ customer.name }}</h3>
+              <p class="customer-email">{{ customer.email }}</p>
+              <p class="customer-phone">{{ customer.phone }}</p>
+
+              <!-- Stats Grid -->
+              <div class="customer-stats">
+                <div class="stat-box">
+                  <span class="stat-number">{{ customer.totalBookings }}</span>
+                  <span class="stat-text">Bookings</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-number">{{ formatCurrency(customer.totalSpent) }}</span>
+                  <span class="stat-text">Spent</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-number">{{ getCompletionRate(customer).toFixed(0) }}%</span>
+                  <span class="stat-text">Completed</span>
+                </div>
+              </div>
+
+              <!-- Meta Info -->
+              <div class="customer-meta">
+                <span class="meta-item">
+                  <span class="meta-icon">📅</span>
+                  <span>Joined {{ getRelativeTime(customer.joinedDate) }}</span>
+                </span>
+                @if (customer.lastBooking) {
+                  <span class="meta-item">
+                    <span class="meta-icon">🕐</span>
+                    <span>Last {{ getRelativeTime(customer.lastBooking) }}</span>
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h3>No customers found</h3>
+        <p>Try adjusting your filters or search criteria</p>
+      </div>
+    }
+  }
+
+  <!-- Details Modal -->
+  @if (showDetailsModal() && selectedCustomer()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h2>Customer Details</h2>
+          <button class="close-btn" (click)="closeModal()">✕</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <div class="customer-details">
+            <!-- Profile Section -->
+            <div class="details-section">
+              <div class="profile-section">
+                <img [src]="selectedCustomer()!.profileImage" [alt]="selectedCustomer()!.name" class="profile-avatar" />
+                <div class="profile-info">
+                  <h3 class="profile-name">{{ selectedCustomer()!.name }}</h3>
+                  <div class="status-badge large" [attr.data-status]="selectedCustomer()!.status.toLowerCase()">
+                    {{ selectedCustomer()!.status }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="details-section">
+              <h4 class="section-title">Contact Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">📧</span>
+                  <div>
+                    <p class="info-label">Email</p>
+                    <p class="info-value">{{ selectedCustomer()!.email }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📱</span>
+                  <div>
+                    <p class="info-label">Phone</p>
+                    <p class="info-value">{{ selectedCustomer()!.phone }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📍</span>
+                  <div>
+                    <p class="info-label">Address</p>
+                    <p class="info-value">{{ selectedCustomer()!.address }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📅</span>
+                  <div>
+                    <p class="info-label">Joined</p>
+                    <p class="info-value">{{ formatDate(selectedCustomer()!.joinedDate) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Activity Statistics -->
+            <div class="details-section">
+              <h4 class="section-title">Activity Statistics</h4>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-icon">📊</div>
+                  <div class="stat-content">
+                    <p class="stat-label">Total Bookings</p>
+                    <p class="stat-value">{{ selectedCustomer()!.totalBookings }}</p>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">✅</div>
+                  <div class="stat-content">
+                    <p class="stat-label">Completed</p>
+                    <p class="stat-value">{{ selectedCustomer()!.completedBookings }}</p>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">❌</div>
+                  <div class="stat-content">
+                    <p class="stat-label">Cancelled</p>
+                    <p class="stat-value">{{ selectedCustomer()!.cancelledBookings }}</p>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">💰</div>
+                  <div class="stat-content">
+                    <p class="stat-label">Total Spent</p>
+                    <p class="stat-value">{{ formatCurrency(selectedCustomer()!.totalSpent) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Booking History -->
+            <div class="details-section">
+              <h4 class="section-title">Booking History</h4>
+              
+              @if (loadingBookings()) {
+                <div class="loading-small">
+                  <div class="spinner-small"></div>
+                  <span>Loading bookings...</span>
+                </div>
+              }
+
+              @if (!loadingBookings() && customerBookings().length > 0) {
+                <div class="bookings-list">
+                  @for (booking of customerBookings(); track booking.id) {
+                    <div class="booking-item">
+                      <div class="booking-main">
+                        <div class="booking-barber">
+                          <span class="barber-icon">✂️</span>
+                          <span class="barber-name">{{ booking.barberName }}</span>
+                        </div>
+                        <div class="booking-service">{{ booking.serviceName }}</div>
+                        <div class="booking-date">
+                          <span class="date-icon">📅</span>
+                          <span>{{ formatDate(booking.date) }}</span>
+                        </div>
+                      </div>
+                      <div class="booking-side">
+                        <div class="booking-amount">{{ formatCurrency(booking.amount) }}</div>
+                        <div class="booking-status" [attr.data-status]="booking.status.toLowerCase()">
+                          {{ booking.status }}
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (!loadingBookings() && customerBookings().length === 0) {
+                <div class="empty-bookings">
+                  <span class="empty-icon-small">📅</span>
+                  <p>No booking history</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-actions">
+          @if (selectedCustomer()!.status === 'ACTIVE') {
+            <button 
+              class="action-btn block" 
+              (click)="blockCustomer(selectedCustomer()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">🚫</span>
+              <span>Block Customer</span>
+            </button>
+          }
+
+          @if (selectedCustomer()!.status === 'BLOCKED') {
+            <button 
+              class="action-btn unblock" 
+              (click)="unblockCustomer(selectedCustomer()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">✓</span>
+              <span>Unblock Customer</span>
+            </button>
+          }
+
+          <button class="action-btn secondary" (click)="closeModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

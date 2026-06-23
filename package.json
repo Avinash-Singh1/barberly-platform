@@ -1,0 +1,25 @@
+{
+  "name": "barberly-platform",
+  "version": "1.0.0",
+  "description": "Barberly booking platform - monorepo",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd apps/backend && npm run dev",
+    "build:backend": "cd apps/backend && npm run build",
+    "start:backend": "cd apps/backend && npm start",
+    "prisma:generate": "cd apps/backend && npm run prisma:generate",
+    "prisma:migrate": "cd apps/backend && npm run prisma:migrate",
+    "prisma:studio": "cd apps/backend && npm run prisma:studio",
+    "install:all": "npm install && cd apps/backend && npm install"
+  },
+  "keywords": ["barberly", "booking", "barber", "salon"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nx/angular": "^22.7.5",
+    "@nx/js": "^22.7.5",
+    "@nx/node": "^22.7.5",
+    "@nx/workspace": "^22.7.5",
+    "nx": "^22.7.5"
+  }
+}

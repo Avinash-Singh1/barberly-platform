@@ -1,0 +1,326 @@
+<div class="appointments-page">
+  <div class="appointments-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Appointments</h1>
+        <p>Manage your bookings and schedule</p>
+      </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div *ngIf="successMessage()" class="alert alert-success">
+      {{ successMessage() }}
+      <button (click)="closeMessage()" class="alert-close">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage() && !showModal()" class="alert alert-error">
+      {{ errorMessage() }}
+      <button (click)="closeMessage()" class="alert-close">✕</button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total</div>
+        <div class="stat-value">{{ stats().total }}</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value">{{ stats().pending }}</div>
+      </div>
+      <div class="stat-card confirmed">
+        <div class="stat-label">Confirmed</div>
+        <div class="stat-value">{{ stats().confirmed }}</div>
+      </div>
+      <div class="stat-card in-progress">
+        <div class="stat-label">In Progress</div>
+        <div class="stat-value">{{ stats().inProgress }}</div>
+      </div>
+      <div class="stat-card completed">
+        <div class="stat-label">Completed</div>
+        <div class="stat-value">{{ stats().completed }}</div>
+      </div>
+      <div class="stat-card cancelled">
+        <div class="stat-label">Cancelled</div>
+        <div class="stat-value">{{ stats().cancelled }}</div>
+      </div>
+    </div>
+
+    <!-- View Controls -->
+    <div class="controls-bar">
+      <!-- View Mode Toggle -->
+      <div class="view-toggle">
+        <button 
+          [class.active]="viewMode() === 'list'"
+          (click)="setViewMode('list')"
+          class="toggle-button"
+        >
+          📋 List
+        </button>
+        <button 
+          [class.active]="viewMode() === 'calendar'"
+          (click)="setViewMode('calendar')"
+          class="toggle-button"
+        >
+          📅 Calendar
+        </button>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-buttons">
+        <button 
+          [class.active]="filterStatus() === 'all'"
+          (click)="setFilterStatus('all')"
+          class="filter-button"
+        >
+          All
+        </button>
+        <button 
+          [class.active]="filterStatus() === 'pending'"
+          (click)="setFilterStatus('pending')"
+          class="filter-button"
+        >
+          Pending
+        </button>
+        <button 
+          [class.active]="filterStatus() === 'confirmed'"
+          (click)="setFilterStatus('confirmed')"
+          class="filter-button"
+        >
+          Confirmed
+        </button>
+        <button 
+          [class.active]="filterStatus() === 'in_progress'"
+          (click)="setFilterStatus('in_progress')"
+          class="filter-button"
+        >
+          In Progress
+        </button>
+        <button 
+          [class.active]="filterStatus() === 'completed'"
+          (click)="setFilterStatus('completed')"
+          class="filter-button"
+        >
+          Completed
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading appointments...</p>
+    </div>
+
+    <!-- List View -->
+    <div *ngIf="!loading() && viewMode() === 'list'" class="list-view">
+      <div *ngIf="filteredAppointments().length === 0" class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>No appointments found</h3>
+        <p>{{ filterStatus() === 'all' ? 'You don\'t have any appointments yet.' : 'No ' + filterStatus() + ' appointments.' }}</p>
+      </div>
+
+      <div *ngIf="filteredAppointments().length > 0" class="appointments-list">
+        <div 
+          *ngFor="let appointment of filteredAppointments()"
+          class="appointment-card"
+          (click)="openAppointmentModal(appointment)"
+        >
+          <div class="appointment-date">
+            <div class="date-day">{{ formatDateShort(appointment.appointmentDate) }}</div>
+            <div class="date-time">{{ formatTime(appointment.appointmentDate) }}</div>
+          </div>
+
+          <div class="appointment-info">
+            <div class="customer-section">
+              <img [src]="getCustomerImage(appointment)" [alt]="getCustomerName(appointment)" class="customer-avatar" />
+              <div class="customer-details">
+                <h4>{{ getCustomerName(appointment) }}</h4>
+                <p class="service-name">{{ appointment.service?.name }}</p>
+                <p class="service-details">
+                  {{ appointment.service?.duration || 60 }} min • ${{ appointment.service?.price }}
+                </p>
+              </div>
+            </div>
+
+            <div class="appointment-status">
+              <span class="status-badge" [ngClass]="getStatusColor(appointment.status)">
+                {{ getStatusLabel(appointment.status) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="appointment-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div *ngIf="!loading() && viewMode() === 'calendar'" class="calendar-view">
+      <!-- Calendar Header -->
+      <div class="calendar-header">
+        <button (click)="previousMonth()" class="calendar-nav-button">‹</button>
+        <h3>{{ getMonthYearLabel() }}</h3>
+        <button (click)="nextMonth()" class="calendar-nav-button">›</button>
+      </div>
+
+      <!-- Calendar Grid -->
+      <div class="calendar-grid">
+        <!-- Day Headers -->
+        <div class="calendar-day-header">Sun</div>
+        <div class="calendar-day-header">Mon</div>
+        <div class="calendar-day-header">Tue</div>
+        <div class="calendar-day-header">Wed</div>
+        <div class="calendar-day-header">Thu</div>
+        <div class="calendar-day-header">Fri</div>
+        <div class="calendar-day-header">Sat</div>
+
+        <!-- Calendar Days -->
+        <div 
+          *ngFor="let day of calendarDays()"
+          class="calendar-day"
+          [class.other-month]="!day.isCurrentMonth"
+          [class.today]="day.isToday"
+          [class.has-appointments]="day.appointments.length > 0"
+        >
+          <div class="day-number">{{ day.date.getDate() }}</div>
+          <div *ngIf="day.appointments.length > 0" class="day-appointments">
+            <div 
+              *ngFor="let apt of day.appointments.slice(0, 3)"
+              class="day-appointment"
+              [ngClass]="getStatusColor(apt.status)"
+              (click)="openAppointmentModal(apt)"
+            >
+              <span class="apt-time">{{ formatTime(apt.appointmentDate) }}</span>
+              <span class="apt-customer">{{ getCustomerName(apt) }}</span>
+            </div>
+            <div *ngIf="day.appointments.length > 3" class="more-appointments">
+              +{{ day.appointments.length - 3 }} more
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Appointment Detail Modal -->
+<div *ngIf="showModal()" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Appointment Details</h2>
+      <button (click)="closeModal()" class="modal-close">✕</button>
+    </div>
+
+    <div *ngIf="selectedAppointment()" class="modal-body">
+      <!-- Error Message in Modal -->
+      <div *ngIf="errorMessage()" class="alert alert-error">
+        {{ errorMessage() }}
+      </div>
+
+      <!-- Customer Info -->
+      <div class="detail-section">
+        <h3>Customer</h3>
+        <div class="customer-info-card">
+          <img [src]="getCustomerImage(selectedAppointment()!)" class="customer-avatar-large" />
+          <div>
+            <h4>{{ getCustomerName(selectedAppointment()!) }}</h4>
+            <p class="customer-contact">{{ selectedAppointment()!.customer?.user?.phone || 'No phone' }}</p>
+            <p class="customer-contact">{{ selectedAppointment()!.customer?.user?.email }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appointment Info -->
+      <div class="detail-section">
+        <h3>Service Details</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Service</span>
+            <span class="info-value">{{ selectedAppointment()!.service?.name }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Date</span>
+            <span class="info-value">{{ formatDate(selectedAppointment()!.appointmentDate) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Time</span>
+            <span class="info-value">{{ formatTime(selectedAppointment()!.appointmentDate) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Duration</span>
+            <span class="info-value">{{ selectedAppointment()!.service?.duration || 60 }} minutes</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Price</span>
+            <span class="info-value">${{ selectedAppointment()!.service?.price }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Status</span>
+            <span class="status-badge" [ngClass]="getStatusColor(selectedAppointment()!.status)">
+              {{ getStatusLabel(selectedAppointment()!.status) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Notes -->
+      <div *ngIf="selectedAppointment()!.notes" class="detail-section">
+        <h3>Customer Notes</h3>
+        <p class="notes-text">{{ selectedAppointment()!.notes }}</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="modal-actions">
+        <button 
+          *ngIf="canConfirm(selectedAppointment()!)"
+          (click)="confirmAppointment(selectedAppointment()!)"
+          [disabled]="actionLoading()"
+          class="btn btn-confirm"
+        >
+          <span *ngIf="!actionLoading()">Confirm Appointment</span>
+          <span *ngIf="actionLoading()">Processing...</span>
+        </button>
+
+        <button 
+          *ngIf="canStart(selectedAppointment()!)"
+          (click)="startAppointment(selectedAppointment()!)"
+          [disabled]="actionLoading()"
+          class="btn btn-start"
+        >
+          <span *ngIf="!actionLoading()">Start Service</span>
+          <span *ngIf="actionLoading()">Processing...</span>
+        </button>
+
+        <button 
+          *ngIf="canComplete(selectedAppointment()!)"
+          (click)="completeAppointment(selectedAppointment()!)"
+          [disabled]="actionLoading()"
+          class="btn btn-complete"
+        >
+          <span *ngIf="!actionLoading()">Complete Appointment</span>
+          <span *ngIf="actionLoading()">Processing...</span>
+        </button>
+
+        <button 
+          *ngIf="canCancel(selectedAppointment()!)"
+          (click)="cancelAppointment(selectedAppointment()!)"
+          [disabled]="actionLoading()"
+          class="btn btn-cancel"
+        >
+          <span *ngIf="!actionLoading()">Cancel</span>
+          <span *ngIf="actionLoading()">Processing...</span>
+        </button>
+
+        <button 
+          (click)="closeModal()"
+          [disabled]="actionLoading()"
+          class="btn btn-secondary"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

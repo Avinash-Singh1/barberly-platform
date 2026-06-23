@@ -1,0 +1,365 @@
+// Barberly Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== USER & AUTH =====
+
+enum UserRole {
+  CUSTOMER
+  BARBER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  phone         String?   @unique
+  passwordHash  String
+  role          UserRole  @default(CUSTOMER)
+  firstName     String
+  lastName      String
+  avatar        String?
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  phoneVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  barberProfile BarberProfile?
+  customerProfile CustomerProfile?
+  appointments  Appointment[]
+  reviews       Review[]
+  notifications Notification[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ===== BARBER =====
+
+enum BarberStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+model BarberProfile {
+  id              String        @id @default(uuid())
+  userId          String        @unique
+  bio             String?
+  experience      Int? // years of experience
+  rating          Float         @default(0)
+  reviewCount     Int           @default(0)
+  status          BarberStatus  @default(PENDING)
+  idProof         String? // URL to uploaded ID
+  idProofVerified Boolean       @default(false)
+  specialty       String? // e.g., "Fade specialist, Beard grooming"
+  commission      Float         @default(20) // percentage taken by platform
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shops        ShopBarber[]
+  services     Service[]
+  appointments Appointment[]
+  earnings     Earning[]
+  gallery      GalleryImage[]
+  availability Availability[]
+
+  @@map("barber_profiles")
+}
+
+model GalleryImage {
+  id        String   @id @default(uuid())
+  barberId  String
+  imageUrl  String
+  caption   String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  barber BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@map("gallery_images")
+}
+
+model Availability {
+  id        String   @id @default(uuid())
+  barberId  String
+  dayOfWeek Int // 0 = Sunday, 6 = Saturday
+  startTime String // e.g., "09:00"
+  endTime   String // e.g., "18:00"
+  isActive  Boolean  @default(true)
+
+  barber BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@map("availability")
+}
+
+// ===== CUSTOMER =====
+
+model CustomerProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  preferredLocation String?
+  favoriteBarbers   String[] // Array of barber IDs
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("customer_profiles")
+}
+
+// ===== SHOP =====
+
+model Shop {
+  id           String   @id @default(uuid())
+  name         String
+  address      String
+  city         String
+  state        String
+  zipCode      String
+  latitude     Float?
+  longitude    Float?
+  phone        String?
+  email        String?
+  description  String?
+  openingHours Json? // { "monday": { "open": "09:00", "close": "18:00" }, ... }
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  barbers      ShopBarber[]
+  appointments Appointment[]
+  images       ShopImage[]
+
+  @@map("shops")
+}
+
+model ShopBarber {
+  id        String   @id @default(uuid())
+  shopId    String
+  barberId  String
+  isPrimary Boolean  @default(false) // Is this the barber's main shop?
+  createdAt DateTime @default(now())
+
+  shop   Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, barberId])
+  @@map("shop_barbers")
+}
+
+model ShopImage {
+  id        String   @id @default(uuid())
+  shopId    String
+  imageUrl  String
+  caption   String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_images")
+}
+
+// ===== SERVICE =====
+
+model Service {
+  id                  String   @id @default(uuid())
+  barberId            String
+  name                String
+  description         String?
+  price               Float
+  duration            Int // minutes
+  homeVisitAvailable  Boolean  @default(false)
+  homeVisitSurcharge  Float?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  barber       BarberProfile @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+// ===== APPOINTMENT =====
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentType {
+  SHOP
+  HOME_VISIT
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  customerId      String
+  barberId        String
+  serviceId       String
+  shopId          String?
+  type            AppointmentType   @default(SHOP)
+  dateTime        DateTime
+  duration        Int // minutes
+  totalPrice      Float
+  status          AppointmentStatus @default(PENDING)
+  notes           String?
+  homeAddress     String? // For home visits
+  cancellationReason String?
+  cancelledBy     String? // userId who cancelled
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  customer User          @relation(fields: [customerId], references: [id])
+  barber   BarberProfile @relation(fields: [barberId], references: [id])
+  service  Service       @relation(fields: [serviceId], references: [id])
+  shop     Shop?         @relation(fields: [shopId], references: [id])
+  review   Review?
+  earning  Earning?
+
+  @@map("appointments")
+}
+
+// ===== REVIEW =====
+
+model Review {
+  id            String   @id @default(uuid())
+  appointmentId String   @unique
+  customerId    String
+  rating        Int // 1-5
+  comment       String?
+  tags          String[] // e.g., ["Professional", "Clean", "On Time"]
+  images        String[] // Array of image URLs
+  barberReply   String?
+  repliedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  customer    User        @relation(fields: [customerId], references: [id])
+
+  @@map("reviews")
+}
+
+// ===== EARNINGS =====
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+model Earning {
+  id              String       @id @default(uuid())
+  appointmentId   String       @unique
+  barberId        String
+  grossAmount     Float
+  commissionRate  Float // percentage
+  commissionAmount Float
+  netAmount       Float
+  payoutStatus    PayoutStatus @default(PENDING)
+  payoutDate      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  appointment Appointment   @relation(fields: [appointmentId], references: [id])
+  barber      BarberProfile @relation(fields: [barberId], references: [id])
+
+  @@map("earnings")
+}
+
+// ===== NOTIFICATION =====
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER
+  REVIEW_RECEIVED
+  BARBER_APPROVED
+  BARBER_REJECTED
+  PAYOUT_COMPLETED
+  GENERAL
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json? // Additional data (e.g., appointmentId)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ===== CMS =====
+
+enum CmsContentType {
+  BANNER
+  FAQ
+  BLOG
+  TESTIMONIAL
+}
+
+model CmsContent {
+  id          String         @id @default(uuid())
+  type        CmsContentType
+  title       String
+  content     String // Rich text or JSON
+  imageUrl    String?
+  order       Int            @default(0)
+  isPublished Boolean        @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("cms_content")
+}
+
+// ===== SETTINGS =====
+
+model SystemSettings {
+  id                   String   @id @default(uuid())
+  maintenanceMode      Boolean  @default(false)
+  defaultCommission    Float    @default(20)
+  cancellationWindow   Int      @default(24) // hours before appointment
+  bookingSlotInterval  Int      @default(30) // minutes
+  maxAdvanceBooking    Int      @default(30) // days
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("system_settings")
+}

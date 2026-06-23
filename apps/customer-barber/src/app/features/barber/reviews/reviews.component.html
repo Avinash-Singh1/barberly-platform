@@ -1,0 +1,274 @@
+<div class="reviews-page">
+  <div class="reviews-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Customer Reviews</h1>
+        <p>View and respond to your customer feedback</p>
+      </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div *ngIf="successMessage()" class="alert alert-success">
+      {{ successMessage() }}
+      <button (click)="closeMessage()" class="alert-close">✕</button>
+    </div>
+
+    <div *ngIf="errorMessage() && !showReplyModal()" class="alert alert-error">
+      {{ errorMessage() }}
+      <button (click)="closeMessage()" class="alert-close">✕</button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading reviews...</p>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="!loading()" class="content-grid">
+      <!-- Left Column: Stats -->
+      <div class="stats-column">
+        <!-- Overall Rating Card -->
+        <div class="rating-card">
+          <div class="rating-overview">
+            <div class="rating-number">{{ ratingStats().average }}</div>
+            <div class="rating-stars">
+              <span 
+                *ngFor="let filled of getStarArray(Math.round(ratingStats().average))"
+                class="star"
+                [class.filled]="filled"
+              >
+                ★
+              </span>
+            </div>
+            <div class="rating-count">Based on {{ ratingStats().total }} reviews</div>
+          </div>
+
+          <!-- Rating Distribution -->
+          <div class="rating-distribution">
+            <div *ngFor="let rating of [5, 4, 3, 2, 1]" class="distribution-row">
+              <span class="rating-label">{{ rating }} ★</span>
+              <div class="distribution-bar">
+                <div 
+                  class="distribution-fill"
+                  [style.width.%]="ratingStats().percentages[rating]"
+                  [ngClass]="getRatingColor(rating)"
+                ></div>
+              </div>
+              <span class="rating-count-text">{{ ratingStats().distribution[rating] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+          <div class="stat-item">
+            <div class="stat-value">{{ filterCounts().all }}</div>
+            <div class="stat-label">Total Reviews</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ filterCounts().withReply }}</div>
+            <div class="stat-label">Replied</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ filterCounts().noReply }}</div>
+            <div class="stat-label">Pending Reply</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Reviews List -->
+      <div class="reviews-column">
+        <!-- Controls -->
+        <div class="controls-bar">
+          <div class="sort-label">Sort by:</div>
+          <div class="sort-buttons">
+            <button 
+              [class.active]="sortBy() === 'newest'"
+              (click)="setSortBy('newest')"
+              class="sort-button"
+            >
+              Newest
+            </button>
+            <button 
+              [class.active]="sortBy() === 'oldest'"
+              (click)="setSortBy('oldest')"
+              class="sort-button"
+            >
+              Oldest
+            </button>
+            <button 
+              [class.active]="sortBy() === 'highest'"
+              (click)="setSortBy('highest')"
+              class="sort-button"
+            >
+              Highest
+            </button>
+            <button 
+              [class.active]="sortBy() === 'lowest'"
+              (click)="setSortBy('lowest')"
+              class="sort-button"
+            >
+              Lowest
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="reviews().length === 0" class="empty-state">
+          <div class="empty-icon">⭐</div>
+          <h3>No reviews yet</h3>
+          <p>When customers complete appointments and leave reviews, they'll appear here.</p>
+        </div>
+
+        <!-- Reviews List -->
+        <div *ngIf="reviews().length > 0" class="reviews-list">
+          <div *ngFor="let review of sortedReviews()" class="review-card">
+            <!-- Review Header -->
+            <div class="review-header">
+              <div class="customer-info">
+                <img [src]="getCustomerImage(review)" [alt]="getCustomerName(review)" class="customer-avatar" />
+                <div class="customer-details">
+                  <h4>{{ getCustomerName(review) }}</h4>
+                  <p class="review-date">{{ formatDateRelative(review.createdAt) }}</p>
+                </div>
+              </div>
+              <div class="review-rating">
+                <div class="stars">
+                  <span 
+                    *ngFor="let filled of getStarArray(review.rating)"
+                    class="star"
+                    [class.filled]="filled"
+                  >
+                    ★
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Service Info -->
+            <div class="service-info">
+              <span class="service-icon">✂️</span>
+              <span class="service-name">{{ review.service?.name || 'Service' }}</span>
+            </div>
+
+            <!-- Review Content -->
+            <div class="review-content">
+              <p class="review-comment">{{ review.comment }}</p>
+              
+              <!-- Tags -->
+              <div *ngIf="review.tags && review.tags.length > 0" class="review-tags">
+                <span *ngFor="let tag of review.tags" class="tag">{{ tag }}</span>
+              </div>
+            </div>
+
+            <!-- Barber Reply -->
+            <div *ngIf="hasReply(review)" class="barber-reply">
+              <div class="reply-header">
+                <span class="reply-icon">💬</span>
+                <span class="reply-label">Your Reply</span>
+                <span class="reply-date">{{ formatDate(review.repliedAt!) }}</span>
+              </div>
+              <p class="reply-text">{{ review.barberReply }}</p>
+            </div>
+
+            <!-- Action Button -->
+            <div class="review-actions">
+              <button 
+                (click)="openReplyModal(review)"
+                class="btn-reply"
+                [class.btn-edit]="hasReply(review)"
+              >
+                {{ getReplyButtonText(review) }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reply Modal -->
+<div *ngIf="showReplyModal()" class="modal-overlay" (click)="closeReplyModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ hasReply(selectedReview()!) ? 'Edit Reply' : 'Reply to Review' }}</h2>
+      <button (click)="closeReplyModal()" class="modal-close">✕</button>
+    </div>
+
+    <div *ngIf="selectedReview()" class="modal-body">
+      <!-- Original Review -->
+      <div class="original-review">
+        <div class="review-summary">
+          <img [src]="getCustomerImage(selectedReview()!)" class="customer-avatar-small" />
+          <div>
+            <h4>{{ getCustomerName(selectedReview()!) }}</h4>
+            <div class="stars-small">
+              <span 
+                *ngFor="let filled of getStarArray(selectedReview()!.rating)"
+                class="star"
+                [class.filled]="filled"
+              >
+                ★
+              </span>
+            </div>
+          </div>
+        </div>
+        <p class="review-text">{{ selectedReview()!.comment }}</p>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="errorMessage()" class="alert alert-error">
+        {{ errorMessage() }}
+      </div>
+
+      <!-- Reply Form -->
+      <form [formGroup]="replyForm" (ngSubmit)="submitReply()" class="reply-form">
+        <label class="form-label">Your Reply</label>
+        <textarea
+          formControlName="reply"
+          class="form-textarea"
+          [class.invalid]="reply?.invalid && reply?.touched"
+          rows="5"
+          placeholder="Thank you for your feedback! We appreciate..."
+        ></textarea>
+
+        <div class="textarea-footer">
+          <div *ngIf="reply?.invalid && reply?.touched" class="field-error">
+            <span *ngIf="reply?.errors?.['required']">Reply is required</span>
+            <span *ngIf="reply?.errors?.['minlength']">
+              Reply must be at least 10 characters
+            </span>
+          </div>
+          
+          <span class="character-count" [class.error]="getCharacterCount() > 500">
+            {{ getCharacterCount() }} / 500
+          </span>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="modal-actions">
+          <button
+            type="button"
+            (click)="closeReplyModal()"
+            class="btn btn-secondary"
+            [disabled]="submitting()"
+          >
+            Cancel
+          </button>
+          
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="submitting() || replyForm.invalid"
+          >
+            <span *ngIf="!submitting()">{{ hasReply(selectedReview()!) ? 'Update Reply' : 'Post Reply' }}</span>
+            <span *ngIf="submitting()">Posting...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

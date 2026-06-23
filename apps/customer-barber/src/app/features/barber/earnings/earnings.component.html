@@ -1,0 +1,253 @@
+<div class="earnings-page">
+  <div class="earnings-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Earnings</h1>
+        <p>Track your income and transaction history</p>
+      </div>
+      <button (click)="requestPayout()" class="btn-payout">
+        💰 Request Payout
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading earnings data...</p>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="!loading()" class="content">
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="summary-card total">
+          <div class="card-icon">💵</div>
+          <div class="card-content">
+            <div class="card-label">Total Earnings</div>
+            <div class="card-value">{{ formatCurrency(earningSummary().total) }}</div>
+            <div class="card-meta">{{ earningSummary().completedAppointments }} completed appointments</div>
+          </div>
+        </div>
+
+        <div class="summary-card month">
+          <div class="card-icon">📅</div>
+          <div class="card-content">
+            <div class="card-label">This Month</div>
+            <div class="card-value">{{ formatCurrency(earningSummary().thisMonth) }}</div>
+            <div class="card-meta">Month-to-date earnings</div>
+          </div>
+        </div>
+
+        <div class="summary-card week">
+          <div class="card-icon">📊</div>
+          <div class="card-content">
+            <div class="card-label">This Week</div>
+            <div class="card-value">{{ formatCurrency(earningSummary().thisWeek) }}</div>
+            <div class="card-meta">Week-to-date earnings</div>
+          </div>
+        </div>
+
+        <div class="summary-card today">
+          <div class="card-icon">⏰</div>
+          <div class="card-content">
+            <div class="card-label">Today</div>
+            <div class="card-value">{{ formatCurrency(earningSummary().today) }}</div>
+            <div class="card-meta">Today's earnings</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart Section -->
+      <div class="chart-section">
+        <div class="section-header">
+          <h2>Last 7 Days</h2>
+          <div class="chart-legend">
+            <span class="legend-item">
+              <span class="legend-dot"></span>
+              Daily Earnings
+            </span>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart">
+            <div class="chart-bars">
+              <div *ngFor="let day of chartData()" class="chart-bar-wrapper">
+                <div class="chart-bar-container">
+                  <div 
+                    class="chart-bar"
+                    [style.height.%]="getChartBarHeight(day.amount)"
+                    [title]="formatCurrency(day.amount)"
+                  >
+                    <span class="bar-value">{{ day.amount > 0 ? formatCurrency(day.amount) : '' }}</span>
+                  </div>
+                </div>
+                <div class="chart-label">{{ day.label }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transactions Section -->
+      <div class="transactions-section">
+        <div class="section-header">
+          <h2>Transaction History</h2>
+          <div class="time-range-buttons">
+            <button 
+              [class.active]="timeRange() === 'all'"
+              (click)="setTimeRange('all')"
+              class="range-button"
+            >
+              All Time
+            </button>
+            <button 
+              [class.active]="timeRange() === 'today'"
+              (click)="setTimeRange('today')"
+              class="range-button"
+            >
+              Today
+            </button>
+            <button 
+              [class.active]="timeRange() === 'week'"
+              (click)="setTimeRange('week')"
+              class="range-button"
+            >
+              This Week
+            </button>
+            <button 
+              [class.active]="timeRange() === 'month'"
+              (click)="setTimeRange('month')"
+              class="range-button"
+            >
+              This Month
+            </button>
+            <button 
+              [class.active]="timeRange() === 'year'"
+              (click)="setTimeRange('year')"
+              class="range-button"
+            >
+              This Year
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="transactions().length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <h3>No transactions found</h3>
+          <p *ngIf="timeRange() === 'all'">Complete appointments to start earning!</p>
+          <p *ngIf="timeRange() !== 'all'">No earnings for this time period.</p>
+          <button (click)="navigateToAppointments()" class="btn-secondary">
+            View Appointments
+          </button>
+        </div>
+
+        <!-- Transactions Table -->
+        <div *ngIf="transactions().length > 0" class="transactions-table">
+          <!-- Desktop Table -->
+          <table class="table-desktop">
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let transaction of transactions()">
+                <td>
+                  <div class="date-cell">
+                    <div class="date">{{ formatDate(transaction.date) }}</div>
+                    <div class="time">{{ formatTime(transaction.date) }}</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="customer-cell">{{ transaction.customerName }}</div>
+                </td>
+                <td>
+                  <div class="service-cell">{{ transaction.serviceName }}</div>
+                </td>
+                <td>
+                  <div class="amount-cell">{{ formatCurrency(transaction.amount) }}</div>
+                </td>
+                <td>
+                  <span class="status-badge status-completed">
+                    Completed
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Mobile Cards -->
+          <div class="table-mobile">
+            <div *ngFor="let transaction of transactions()" class="transaction-card">
+              <div class="transaction-header">
+                <div class="transaction-date">
+                  <div class="date">{{ formatDate(transaction.date) }}</div>
+                  <div class="time">{{ formatTime(transaction.date) }}</div>
+                </div>
+                <span class="status-badge status-completed">Completed</span>
+              </div>
+              <div class="transaction-body">
+                <div class="transaction-row">
+                  <span class="row-label">Customer:</span>
+                  <span class="row-value">{{ transaction.customerName }}</span>
+                </div>
+                <div class="transaction-row">
+                  <span class="row-label">Service:</span>
+                  <span class="row-value">{{ transaction.serviceName }}</span>
+                </div>
+                <div class="transaction-row">
+                  <span class="row-label">Amount:</span>
+                  <span class="row-value amount">{{ formatCurrency(transaction.amount) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Footer -->
+          <div class="table-footer">
+            <div class="footer-label">
+              Total for {{ timeRange() === 'all' ? 'All Time' : timeRange() }}:
+            </div>
+            <div class="footer-value">
+              {{ formatCurrency(getTotalTransactions()) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Cards -->
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-icon">💡</div>
+          <div class="info-content">
+            <h3>How Earnings Work</h3>
+            <p>You earn money when you complete appointments. Each completed service adds to your total earnings immediately.</p>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-icon">🏦</div>
+          <div class="info-content">
+            <h3>Payouts</h3>
+            <p>Request a payout anytime to transfer your earnings to your bank account. Processing typically takes 2-3 business days.</p>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-icon">📈</div>
+          <div class="info-content">
+            <h3>Track Performance</h3>
+            <p>Monitor your earnings over time to understand your busiest periods and optimize your schedule for maximum income.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

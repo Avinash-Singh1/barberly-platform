@@ -1,0 +1,157 @@
+<div class="dashboard-page">
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Welcome back, {{ authService.userFullName() }}! 👋</h1>
+        <p>Here's what's happening today</p>
+      </div>
+      <div class="header-actions">
+        <button routerLink="/barber/appointments" class="btn-secondary">
+          View All Appointments
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          📅
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats().todayTotal }}</h3>
+          <p>Today's Appointments</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon pending">
+          ⏳
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats().pending }}</h3>
+          <p>Pending Confirmation</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon confirmed">
+          ✓
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats().confirmed }}</h3>
+          <p>Confirmed</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon completed">
+          ★
+        </div>
+        <div class="stat-content">
+          <h3>{{ stats().completed }}</h3>
+          <p>Completed</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Appointments -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Today's Appointments</h2>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading()" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading appointments...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!loading() && todayAppointments().length === 0" class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>No appointments today</h3>
+        <p>You're all clear for today! Enjoy your day off.</p>
+      </div>
+
+      <!-- Appointments List -->
+      <div *ngIf="!loading() && todayAppointments().length > 0" class="appointments-list">
+        <div *ngFor="let appointment of todayAppointments()" class="appointment-card">
+          <div class="appointment-time">
+            <div class="time-display">{{ formatTime(appointment.appointmentDate) }}</div>
+            <div class="time-duration">{{ appointment.service?.duration || 60 }} min</div>
+          </div>
+
+          <div class="appointment-details">
+            <div class="customer-info">
+              <img [src]="getCustomerImage(appointment)" [alt]="getCustomerName(appointment)" class="customer-avatar" />
+              <div>
+                <h4>{{ getCustomerName(appointment) }}</h4>
+                <p class="service-name">{{ appointment.service?.name }}</p>
+              </div>
+            </div>
+
+            <div class="appointment-meta">
+              <span class="status-badge" [ngClass]="getStatusColor(appointment.status)">
+                {{ getStatusLabel(appointment.status) }}
+              </span>
+              <span class="price">${{ appointment.service?.price }}</span>
+            </div>
+          </div>
+
+          <div class="appointment-actions">
+            <button
+              *ngIf="appointment.status === AppointmentStatus.PENDING"
+              (click)="confirmAppointment(appointment)"
+              class="btn-action btn-confirm"
+            >
+              Confirm
+            </button>
+            <button
+              *ngIf="appointment.status === AppointmentStatus.CONFIRMED"
+              (click)="startAppointment(appointment)"
+              class="btn-action btn-start"
+            >
+              Start Service
+            </button>
+            <button
+              *ngIf="appointment.status === AppointmentStatus.IN_PROGRESS"
+              class="btn-action btn-complete"
+              [routerLink]="['/barber/appointments']"
+            >
+              Complete
+            </button>
+            <button class="btn-action btn-details" [routerLink]="['/barber/appointments']">
+              View Details
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <a routerLink="/barber/appointments" class="quick-link-card">
+        <div class="quick-link-icon">📆</div>
+        <h3>Appointments</h3>
+        <p>Manage your schedule</p>
+      </a>
+      <a routerLink="/barber/reviews" class="quick-link-card">
+        <div class="quick-link-icon">⭐</div>
+        <h3>Reviews</h3>
+        <p>View customer feedback</p>
+      </a>
+      <a routerLink="/barber/earnings" class="quick-link-card">
+        <div class="quick-link-icon">💰</div>
+        <h3>Earnings</h3>
+        <p>Track your income</p>
+      </a>
+      <a routerLink="/barber/services" class="quick-link-card">
+        <div class="quick-link-icon">✂️</div>
+        <h3>Services</h3>
+        <p>Manage your services</p>
+      </a>
+    </div>
+  </div>
+</div>

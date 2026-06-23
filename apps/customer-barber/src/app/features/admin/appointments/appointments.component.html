@@ -1,0 +1,374 @@
+<div class="admin-appointments">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Appointment Management</h1>
+      <p class="page-subtitle">Monitor and manage all platform appointments</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item" [class.active]="selectedStatus() === 'ALL'" (click)="setStatusFilter('ALL')">
+      <span class="stat-label">Total</span>
+      <span class="stat-value">{{ totalCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'PENDING'" (click)="setStatusFilter('PENDING')">
+      <span class="stat-label">Pending</span>
+      <span class="stat-value" data-status="pending">{{ pendingCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'CONFIRMED'" (click)="setStatusFilter('CONFIRMED')">
+      <span class="stat-label">Confirmed</span>
+      <span class="stat-value" data-status="confirmed">{{ confirmedCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'IN_PROGRESS'" (click)="setStatusFilter('IN_PROGRESS')">
+      <span class="stat-label">In Progress</span>
+      <span class="stat-value" data-status="progress">{{ inProgressCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'COMPLETED'" (click)="setStatusFilter('COMPLETED')">
+      <span class="stat-label">Completed</span>
+      <span class="stat-value" data-status="completed">{{ completedCount() }}</span>
+    </div>
+    <div class="stat-item" [class.active]="selectedStatus() === 'CANCELLED'" (click)="setStatusFilter('CANCELLED')">
+      <span class="stat-label">Cancelled</span>
+      <span class="stat-value" data-status="cancelled">{{ cancelledCount() }}</span>
+    </div>
+  </div>
+
+  <!-- Filters Row -->
+  <div class="filters-row">
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <input 
+        type="text" 
+        placeholder="Search by customer, barber, or service..." 
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input"
+      />
+      <span class="search-icon">🔍</span>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="date-filter">
+      <button 
+        class="filter-btn" 
+        [class.active]="selectedDateFilter() === 'ALL'"
+        (click)="setDateFilter('ALL')"
+      >
+        All Time
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="selectedDateFilter() === 'TODAY'"
+        (click)="setDateFilter('TODAY')"
+      >
+        Today
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="selectedDateFilter() === 'WEEK'"
+        (click)="setDateFilter('WEEK')"
+      >
+        This Week
+      </button>
+      <button 
+        class="filter-btn" 
+        [class.active]="selectedDateFilter() === 'MONTH'"
+        (click)="setDateFilter('MONTH')"
+      >
+        This Month
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading appointments...</p>
+    </div>
+  }
+
+  <!-- Appointments Table/List -->
+  @if (!loading()) {
+    @if (filteredAppointments().length > 0) {
+      <!-- Desktop Table -->
+      <div class="appointments-table desktop-only">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Barber</th>
+              <th>Service</th>
+              <th>Date & Time</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (appointment of filteredAppointments(); track appointment.id) {
+              <tr (click)="viewDetails(appointment)">
+                <td>
+                  <div class="person-cell">
+                    <div class="person-name">{{ appointment.customerName }}</div>
+                    <div class="person-contact">{{ appointment.customerEmail }}</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="person-cell">
+                    <div class="person-name">{{ appointment.barberName }}</div>
+                    <div class="person-contact">{{ appointment.barberEmail }}</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="service-cell">
+                    <div class="service-name">{{ appointment.serviceName }}</div>
+                    <div class="service-duration">{{ appointment.duration }} min</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="date-cell">
+                    <div class="date-value">{{ formatDate(appointment.date) }}</div>
+                    <div class="time-value">{{ formatTime(appointment.date) }}</div>
+                  </div>
+                </td>
+                <td>
+                  <span class="price-value">{{ formatCurrency(appointment.servicePrice) }}</span>
+                </td>
+                <td>
+                  <span class="status-badge" [attr.data-status]="appointment.status.toLowerCase()">
+                    {{ appointment.status.replace('_', ' ') }}
+                  </span>
+                </td>
+                <td>
+                  <button class="action-btn-small" (click)="$event.stopPropagation(); viewDetails(appointment)">
+                    View
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards -->
+      <div class="appointments-cards mobile-only">
+        @for (appointment of filteredAppointments(); track appointment.id) {
+          <div class="appointment-card" (click)="viewDetails(appointment)">
+            <div class="card-header">
+              <span class="status-badge" [attr.data-status]="appointment.status.toLowerCase()">
+                {{ appointment.status.replace('_', ' ') }}
+              </span>
+              <span class="card-price">{{ formatCurrency(appointment.servicePrice) }}</span>
+            </div>
+            
+            <div class="card-body">
+              <div class="card-section">
+                <span class="section-icon">👤</span>
+                <div class="section-content">
+                  <div class="section-label">Customer</div>
+                  <div class="section-value">{{ appointment.customerName }}</div>
+                </div>
+              </div>
+
+              <div class="card-section">
+                <span class="section-icon">✂️</span>
+                <div class="section-content">
+                  <div class="section-label">Barber</div>
+                  <div class="section-value">{{ appointment.barberName }}</div>
+                </div>
+              </div>
+
+              <div class="card-section">
+                <span class="section-icon">📋</span>
+                <div class="section-content">
+                  <div class="section-label">Service</div>
+                  <div class="section-value">{{ appointment.serviceName }} ({{ appointment.duration }}min)</div>
+                </div>
+              </div>
+
+              <div class="card-section">
+                <span class="section-icon">📅</span>
+                <div class="section-content">
+                  <div class="section-label">Date & Time</div>
+                  <div class="section-value">{{ formatDateTime(appointment.date) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button class="view-details-btn" (click)="$event.stopPropagation(); viewDetails(appointment)">
+                View Details
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="empty-icon">📅</span>
+        <h3>No appointments found</h3>
+        <p>Try adjusting your filters or search criteria</p>
+      </div>
+    }
+  }
+
+  <!-- Details Modal -->
+  @if (showDetailsModal() && selectedAppointment()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h2>Appointment Details</h2>
+          <button class="close-btn" (click)="closeModal()">✕</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <div class="appointment-details">
+            <!-- Status Header -->
+            <div class="details-section">
+              <div class="status-header">
+                <span class="status-badge large" [attr.data-status]="selectedAppointment()!.status.toLowerCase()">
+                  {{ selectedAppointment()!.status.replace('_', ' ') }}
+                </span>
+                <span class="appointment-price">{{ formatCurrency(selectedAppointment()!.servicePrice) }}</span>
+              </div>
+            </div>
+
+            <!-- Customer Information -->
+            <div class="details-section">
+              <h4 class="section-title">Customer Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">👤</span>
+                  <div>
+                    <p class="info-label">Name</p>
+                    <p class="info-value">{{ selectedAppointment()!.customerName }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📧</span>
+                  <div>
+                    <p class="info-label">Email</p>
+                    <p class="info-value">{{ selectedAppointment()!.customerEmail }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📱</span>
+                  <div>
+                    <p class="info-label">Phone</p>
+                    <p class="info-value">{{ selectedAppointment()!.customerPhone }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barber Information -->
+            <div class="details-section">
+              <h4 class="section-title">Barber Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">✂️</span>
+                  <div>
+                    <p class="info-label">Name</p>
+                    <p class="info-value">{{ selectedAppointment()!.barberName }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📧</span>
+                  <div>
+                    <p class="info-label">Email</p>
+                    <p class="info-value">{{ selectedAppointment()!.barberEmail }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Appointment Details -->
+            <div class="details-section">
+              <h4 class="section-title">Appointment Details</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-icon">📋</span>
+                  <div>
+                    <p class="info-label">Service</p>
+                    <p class="info-value">{{ selectedAppointment()!.serviceName }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">⏱️</span>
+                  <div>
+                    <p class="info-label">Duration</p>
+                    <p class="info-value">{{ selectedAppointment()!.duration }} minutes</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📅</span>
+                  <div>
+                    <p class="info-label">Date</p>
+                    <p class="info-value">{{ formatDate(selectedAppointment()!.date) }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">🕐</span>
+                  <div>
+                    <p class="info-label">Time</p>
+                    <p class="info-value">{{ formatTime(selectedAppointment()!.date) }}</p>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="info-icon">📝</span>
+                  <div>
+                    <p class="info-label">Created</p>
+                    <p class="info-value">{{ getRelativeTime(selectedAppointment()!.createdAt) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            @if (selectedAppointment()!.notes) {
+              <div class="details-section">
+                <h4 class="section-title">Customer Notes</h4>
+                <div class="notes-box">
+                  {{ selectedAppointment()!.notes }}
+                </div>
+              </div>
+            }
+
+            <!-- Cancel Reason -->
+            @if (selectedAppointment()!.cancelReason) {
+              <div class="details-section">
+                <h4 class="section-title">Cancellation Reason</h4>
+                <div class="cancel-reason-box">
+                  {{ selectedAppointment()!.cancelReason }}
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-actions">
+          @if (selectedAppointment()!.status !== 'CANCELLED' && selectedAppointment()!.status !== 'COMPLETED') {
+            <button 
+              class="action-btn cancel" 
+              (click)="cancelAppointment(selectedAppointment()!)"
+              [disabled]="processingAction()"
+            >
+              <span class="btn-icon">✕</span>
+              <span>Cancel Appointment</span>
+            </button>
+          }
+
+          <button class="action-btn secondary" (click)="closeModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

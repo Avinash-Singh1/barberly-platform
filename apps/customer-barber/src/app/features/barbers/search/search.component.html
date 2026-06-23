@@ -1,0 +1,234 @@
+<div class="search-page">
+  <!-- Search Header -->
+  <div class="search-header">
+    <div class="container">
+      <h1>Find Your Perfect Barber</h1>
+      
+      <!-- Search Bar -->
+      <div class="search-bar-container">
+        <form (ngSubmit)="onSearch()" class="search-form">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            [ngModelOptions]="{standalone: true}"
+            placeholder="Search by name, service, or specialty..."
+            class="search-input"
+          />
+          <button type="submit" class="search-button">
+            🔍 Search
+          </button>
+        </form>
+        <button class="filter-toggle-mobile" (click)="toggleFilters()">
+          {{ filtersOpen() ? '✕ Close' : '🎚️ Filters' }}
+        </button>
+      </div>
+
+      <!-- Results Summary -->
+      @if (!loading()) {
+        <p class="results-summary">
+          Found {{ totalResults() }} barber{{ totalResults() !== 1 ? 's' : '' }}
+        </p>
+      }
+    </div>
+  </div>
+
+  <div class="search-content">
+    <div class="container">
+      <div class="search-layout">
+        <!-- Filters Sidebar -->
+        <aside class="filters-sidebar" [class.open]="filtersOpen()">
+          <div class="filters-header">
+            <h2>Filters</h2>
+            <button class="btn-clear" (click)="clearFilters()">Clear All</button>
+          </div>
+
+          <!-- Location Filter -->
+          <div class="filter-group">
+            <label class="filter-label">Location</label>
+            <select 
+              [(ngModel)]="selectedCity"
+              (ngModelChange)="onFilterChange()"
+              class="filter-select"
+            >
+              <option value="">All Cities</option>
+              @for (city of cities; track city) {
+                <option [value]="city">{{ city }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Rating Filter -->
+          <div class="filter-group">
+            <label class="filter-label">Minimum Rating</label>
+            <div class="rating-options">
+              @for (rating of [5, 4, 3, 2, 1]; track rating) {
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="rating"
+                    [value]="rating"
+                    [(ngModel)]="minRating"
+                    (ngModelChange)="onFilterChange()"
+                  />
+                  <span>{{ getRatingStars(rating) }} & up</span>
+                </label>
+              }
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  name="rating"
+                  [value]="null"
+                  [(ngModel)]="minRating"
+                  (ngModelChange)="onFilterChange()"
+                />
+                <span>Any Rating</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Price Range Filter -->
+          <div class="filter-group">
+            <label class="filter-label">Price Range</label>
+            <div class="price-inputs">
+              <input
+                type="number"
+                [(ngModel)]="minPrice"
+                (ngModelChange)="onFilterChange()"
+                placeholder="Min"
+                class="price-input"
+              />
+              <span class="price-separator">-</span>
+              <input
+                type="number"
+                [(ngModel)]="maxPrice"
+                (ngModelChange)="onFilterChange()"
+                placeholder="Max"
+                class="price-input"
+              />
+            </div>
+          </div>
+
+          <!-- Sort Options -->
+          <div class="filter-group">
+            <label class="filter-label">Sort By</label>
+            <select 
+              [(ngModel)]="sortBy"
+              (ngModelChange)="onSortChange()"
+              class="filter-select"
+            >
+              <option value="rating">Highest Rated</option>
+              <option value="experience">Most Experienced</option>
+              <option value="price">Price</option>
+            </select>
+          </div>
+        </aside>
+
+        <!-- Results Grid -->
+        <div class="results-section">
+          @if (loading()) {
+            <div class="loading-state">
+              <div class="spinner-large"></div>
+              <p>Searching for barbers...</p>
+            </div>
+          } @else if (barbers().length > 0) {
+            <div class="barbers-grid">
+              @for (barber of barbers(); track barber.id) {
+                <div class="barber-card" (click)="viewBarber(barber.id)">
+                  <div class="barber-image">
+                    <img [src]="getBarberImage(barber)" [alt]="getBarberFullName(barber)" />
+                    @if (barber.rating >= 4.5) {
+                      <div class="badge-top-rated">Top Rated</div>
+                    }
+                  </div>
+
+                  <div class="barber-info">
+                    <h3>{{ getBarberFullName(barber) }}</h3>
+
+                    <div class="barber-rating">
+                      <span class="stars">{{ getRatingStars(barber.rating) }}</span>
+                      <span class="rating-text">
+                        {{ barber.rating }} ({{ barber.totalReviews }})
+                      </span>
+                    </div>
+
+                    @if (barber.city) {
+                      <div class="barber-location">
+                        📍 {{ barber.city }}
+                      </div>
+                    }
+
+                    @if (barber.specialties && barber.specialties.length > 0) {
+                      <div class="specialties">
+                        @for (specialty of barber.specialties.slice(0, 2); track specialty) {
+                          <span class="specialty-tag">{{ specialty }}</span>
+                        }
+                      </div>
+                    }
+
+                    @if (barber.yearsOfExperience) {
+                      <p class="experience">
+                        {{ barber.yearsOfExperience }} years exp.
+                      </p>
+                    }
+
+                    @if (barber.services && barber.services.length > 0) {
+                      <div class="price-range">
+                        From ${{ barber.services[0].price }}
+                      </div>
+                    }
+                  </div>
+
+                  <button class="btn-book">View Profile</button>
+                </div>
+              }
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages() > 1) {
+              <div class="pagination">
+                <button
+                  class="page-btn"
+                  [disabled]="currentPage() === 1"
+                  (click)="goToPage(currentPage() - 1)"
+                >
+                  ← Previous
+                </button>
+
+                @for (page of getPageNumbers(); track page) {
+                  @if (page === -1) {
+                    <span class="page-ellipsis">...</span>
+                  } @else {
+                    <button
+                      class="page-number"
+                      [class.active]="page === currentPage()"
+                      (click)="goToPage(page)"
+                    >
+                      {{ page }}
+                    </button>
+                  }
+                }
+
+                <button
+                  class="page-btn"
+                  [disabled]="currentPage() === totalPages()"
+                  (click)="goToPage(currentPage() + 1)"
+                >
+                  Next →
+                </button>
+              </div>
+            }
+          } @else {
+            <div class="empty-state">
+              <div class="empty-icon">😕</div>
+              <h2>No Barbers Found</h2>
+              <p>Try adjusting your filters or search terms</p>
+              <button class="btn btn-primary" (click)="clearFilters()">
+                Clear Filters
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
